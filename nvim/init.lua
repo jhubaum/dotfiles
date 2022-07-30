@@ -61,6 +61,7 @@ require('packer').startup(function()
 
 vim.g.tokyonight_style = "night"
 vim.cmd "colorscheme tokyonight"
+vim.cmd "highlight normal guibg=000000"
 
 local configs = require'nvim-treesitter.configs'
 configs.setup {
