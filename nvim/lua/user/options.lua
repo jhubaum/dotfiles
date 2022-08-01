@@ -12,6 +12,7 @@ vim.o.hidden = true
 vim.o.completeopt='menuone,noinsert,noselect'
 vim.bo.autoindent = true
 vim.bo.smartindent = true
+vim.o.wildmode = 'list:longest'
 
 vim.o.tabstop = 2
 vim.o.softtabstop = 2
