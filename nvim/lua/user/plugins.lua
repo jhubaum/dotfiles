@@ -60,4 +60,16 @@ return packer.startup(function(use)
 
   use "folke/tokyonight.nvim"
 
+  use { 
+	"nvim-neorg/neorg",
+	config = function()
+		require('neorg').setup { 
+      load = {
+        ["core.defaults"] = { }
+      }
+    }
+	end,
+	requires = "nvim-lua/plenary.nvim"
+  }
+
 end)
