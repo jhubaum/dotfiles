@@ -15,7 +15,7 @@
 # Use the command 'task show' to see all defaults and overrides
 
 # Files
-data.location=/Users/jhuwald/.task
+data.location=~/.task
 
 # To use the default location of the XDG directories,
 # move this configuration file from ~/.taskrc to ~/.config/task/taskrc and uncomment below
@@ -51,4 +51,6 @@ report.all.labels=ID,St,UUID,A,Age,Done,D,P,Project,Tags,R,Wait,Sch,Due,Until,De
 report.all.columns=id,status.short,uuid.short,start.active,entry.age,end.age,depends.indicator,priority,project.parent,tags.count,recur.indicator,wait.remaining,scheduled.remaining,due,until.remaining,description,jira,gitshai
 news.version=2.6.0
 context.work.read=+luaconversion or +lua or +terrier or +nterc or +lpq or +tgeo or +pp
-context=work
+context.private.read=-luaconversion and -lua and -terrier and -nterc and -lpq and -tgeo and -pp
+context=private
+context.private=-luaconversion and -lua and -terrier and -nterc and -lpq and -tgeo and -pp
