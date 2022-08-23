@@ -21,6 +21,6 @@ vim.o.expandtab = true
 vim.wo.number = true
 vim.wo.relativenumber = true
 vim.wo.signcolumn = 'yes'
-vim.wo.wrap = false
+vim.wo.wrap = true
 
 vim.cmd "set clipboard+=unnamedplus"
