@@ -16,6 +16,7 @@ keymap("", "<right>", "<nop>", opts)
 
 -- keymappings around buffers
 keymap("", "<leader>bb", ':lua require"telescope.builtin".buffers()<CR>', opts)
+keymap("", "<leader>bq", ':bp|bd#<CR>', opts)
 
 -- keymappings around code and lsp interactions
 keymap("", "<leader>cd", ':lua vim.lsp.buf.definition()<CR>')
