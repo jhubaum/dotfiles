@@ -43,33 +43,26 @@ return packer.startup(function(use)
 
   -- Lsp
   use "neovim/nvim-lspconfig"
-  use "nvim-lua/completion-nvim"
   use "anott03/nvim-lspinstall"
+
+  use {
+    'nvim-telescope/telescope.nvim', tag = '0.1.0',
+    requires = { {'nvim-lua/plenary.nvim'} }
+  }
 
   -- Fuzzy finder
   use "nvim-lua/popup.nvim"
   use "nvim-lua/plenary.nvim"
-  use "nvim-lua/telescope.nvim"
   use "jremmen/vim-ripgrep"
+
+
 
   use {
         "nvim-treesitter/nvim-treesitter",
         run = function() require("nvim-treesitter.install").update({ with_sync = true }) end,
   }
+  use { 'sindrets/diffview.nvim', requires = 'nvim-lua/plenary.nvim' }
   use "sheerun/vim-polyglot"
 
   use "folke/tokyonight.nvim"
-
-  use { 
-	"nvim-neorg/neorg",
-	config = function()
-		require('neorg').setup { 
-      load = {
-        ["core.defaults"] = { }
-      }
-    }
-	end,
-	requires = "nvim-lua/plenary.nvim"
-  }
-
 end)

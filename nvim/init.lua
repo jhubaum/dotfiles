@@ -9,18 +9,13 @@ vim.cmd "highlight NormalNC guibg=000000"
 
 local configs = require'nvim-treesitter.configs'
 configs.setup {
-  ensure_installed = {'python', 'cpp', 'lua', 'rust', 'markdown', 'norg'},
-  highlight = {
-    enable = true,
-  }
+  ensure_installed = {'python', 'cpp', 'lua', 'rust', 'markdown'},
+  --highlight = {
+  --  enable = true,
+  --}
 }
 
 local lspconfig = require'lspconfig'
-local completion = require'completion'
-local function custom_on_attach(client)
-  print('Attaching to ' .. client.name)
-  completion.on_attach(client)
-end
 local default_config = {
   on_attach = custom_on_attach,
 }
