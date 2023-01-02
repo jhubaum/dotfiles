@@ -27,10 +27,10 @@ keymap('', '<leader>wj', ':wincmd j<CR>', silent)
 keymap('', '<leader>wk', ':wincmd k<CR>', silent)
 keymap('', '<leader>wl', ':wincmd l<CR>', silent)
 
-keymap('', '<leader>wH', ':vsplit<CR>:wincmd l<CR>', silent)
-keymap('', '<leader>wJ', ':split<CR>', silent)
-keymap('', '<leader>wK', ':split<CR>:wincmd j<CR>', silent)
-keymap('', '<leader>wL', ':vsplit<CR>', silent)
+keymap('', '<leader>wH', ':vsplit<CR>', silent)
+keymap('', '<leader>wJ', ':split<CR>:wincmd j<CR>', silent)
+keymap('', '<leader>wK', ':split<CR>', silent)
+keymap('', '<leader>wL', ':vsplit<CR>:wincmd l<CR>', silent)
 
 -- keymappings around code and lsp interactions
 keymap('', '<leader>cd', ':lua vim.lsp.buf.definition()<CR>')
