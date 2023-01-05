@@ -16,7 +16,7 @@ keymap('', '<right>', '<nop>', silent)
 
 
 -- keymappings for opening files relative to current buffer
-keymap('', ',e ', ':e <C-R>=expand("%:p:h") . "/" <CR>', silent)
+keymap('', ',e', ':e <C-R>=expand("%:p:h") . "/" <CR>', silent)
 
 -- keymappings around buffers
 keymap('', '<leader>bb', ':lua require"telescope.builtin".buffers()<CR>', silent)
