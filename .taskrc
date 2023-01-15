@@ -1,0 +1,74 @@
+# [Created by task 2.6.2 8/16/2022 09:42:52]
+# Taskwarrior program configuration file.
+# For more documentation, see https://taskwarrior.org or try 'man task', 'man task-color',
+# 'man task-sync' or 'man taskrc'
+
+# Here is an example of entries that use the default, override and blank values
+#   variable=foo   -- By specifying a value, this overrides the default
+#   variable=      -- By specifying no value, this means no default
+#   #variable=foo  -- By commenting out the line, or deleting it, this uses the default
+
+# You can also refence environment variables:
+#   variable=$HOME/task
+#   variable=$VALUE
+
+# Use the command 'task show' to see all defaults and overrides
+
+# Files
+data.location=~/.task
+
+# To use the default location of the XDG directories,
+# move this configuration file from ~/.taskrc to ~/.config/task/taskrc and uncomment below
+
+#data.location=~/.local/share/task
+#hooks.location=~/.config/task/hooks
+
+# Color theme (uncomment one to use)
+#include light-16.theme
+#include light-256.theme
+#include dark-16.theme
+#include dark-256.theme
+#include dark-red-256.theme
+#include dark-green-256.theme
+#include dark-blue-256.theme
+#include dark-violets-256.theme
+#include dark-yellow-green.theme
+#include dark-gray-256.theme
+#include dark-gray-blue-256.theme
+#include solarized-dark-256.theme
+#include solarized-light-256.theme
+#include no-color.theme
+
+# UDA for jira and specific git repositories
+# see https://gist.github.com/drkarl/2bffab93b3e44b70cc46d5035186848c
+uda.jira.type=string
+uda.jira.label=Jira
+
+uda.gitshai.type=string
+uda.gitshai.label=SHAI
+
+uda.reviewed.type=date
+uda.reviewed.label=Reviewed
+
+report._reviewed.description=Tasksh review report.  Adjust the filter to your needs.
+report._reviewed.columns=uuid
+report._reviewed.sort=reviewed+,modified+
+report._reviewed.filter=( reviewed.none: or reviewed.before:now-6days ) and ( +PENDING or +WAITING )
+
+report.all.labels=ID,St,UUID,A,Age,Done,D,P,Project,Tags,R,Wait,Sch,Due,Until,Description,Ticket,SHAI
+report.all.columns=id,status.short,uuid.short,start.active,entry.age,end.age,depends.indicator,priority,project.parent,tags.count,recur.indicator,wait.remaining,scheduled.remaining,due,until.remaining,description,jira,gitshai
+
+news.version=2.6.0
+
+report.custom.weekly.description=A list of all tasks that should appear in my weekly report
+report.custom.weekly.columns=id,uuid.short,project,description,status,start.active,gitshai,jira,tags
+report.custom.weekly.labels=ID,UUID,Project,Desc,Status,Active,GithubMR,Ticket,Tags
+report.custom.weekly.sort=project+\/,status+,entry+
+report.custom.weekly.filter=(+luaconversion or +lua or +terrier or +nterc or +pp or +sh or +tgeo) and ((status:completed and end.after:now-1wk) or (status:pending and (+next or +ACTIVE or due.before:now+1wk or scheduled.before:now+1wk)))
+
+context.work.read=+luaconversion or +lua or +terrier or +nterc or +lpq or +tgeo or +pp or +sh or +nvim
+context.private.read=-luaconversion and -lua and -terrier and -nterc and -lpq and -tgeo and -pp and -sh
+context.private=-luaconversion and -lua and -terrier and -nterc and -lpq and -tgeo and -pp and -sh
+context=private
+
+
