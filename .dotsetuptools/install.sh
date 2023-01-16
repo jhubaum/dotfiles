@@ -45,3 +45,11 @@ chsh -s $(which zsh)
 sudo apt install -y \
     firefox-esr thunderbird flameshot taskwarrior vlc nextcloud-desktop \
     keepassxc telegram-desktop
+
+# pyenv
+# https://github.com/pyenv/pyenv
+git clone https://github.com/pyenv/pyenv.git ~/.pyenv
+{
+    # Try to compile a dynamic Bash extension to speed up Pyenv. Don't worry if it fails; Pyenv will still work normally
+    cd ~/.pyenv && src/configure && make -C src
+}
