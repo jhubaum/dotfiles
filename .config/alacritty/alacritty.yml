@@ -61,3 +61,5 @@ colors: *tokyo-night
 window:
   opacity: 0.85
   decorations: None
+font:
+  size: 7
