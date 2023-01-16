@@ -10,6 +10,7 @@
 - Clone this repo (with https) (with `--bare`): `git clone --bare <git-repo-url> $HOME/.cfg`
 - Define config alias in current shell scope: `alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'`
 - Checkout the actual content from the configs `config checkout`
+- Make sure untracked files are ignored: `config config status.showUntrackedFiles no`
 - Run the installation script `.dotsetuptools/install.sh`
 - Log out and in again to update shell config
 - Setup ssh key and update remote url of config repo checkout
