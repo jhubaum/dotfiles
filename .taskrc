@@ -64,11 +64,12 @@ report.custom.weekly.description=A list of all tasks that should appear in my we
 report.custom.weekly.columns=id,uuid.short,project,description,status,start.active,gitshai,jira,tags
 report.custom.weekly.labels=ID,UUID,Project,Desc,Status,Active,GithubMR,Ticket,Tags
 report.custom.weekly.sort=project+\/,status+,entry+
-report.custom.weekly.filter=(+luaconversion or +lua or +terrier or +nterc or +pp or +sh or +tgeo) and ((status:completed and end.after:now-1wk) or (status:pending and (+next or +ACTIVE or due.before:now+1wk or scheduled.before:now+1wk)))
+report.custom.weekly.filter=+work and ((status:completed and end.after:now-1wk) or (status:pending and (+next or +ACTIVE or due.before:now+1wk or scheduled.before:now+1wk)))
 
-context.work.read=+luaconversion or +lua or +terrier or +nterc or +lpq or +tgeo or +pp or +sh or +nvim
-context.private.read=-luaconversion and -lua and -terrier and -nterc and -lpq and -tgeo and -pp and -sh
-context.private=-luaconversion and -lua and -terrier and -nterc and -lpq and -tgeo and -pp and -sh
+context.work.read=+work or +nvim
+context.work=+work or +nvim
+context.workf.read=(+work or +nvim) and (+next or +ACTIVE or scheduled.before:now+1wk or +PRIORITY)
+context.private.read=-work
+context.private=-work
+
 context=private
-
-
