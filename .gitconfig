@@ -4,3 +4,9 @@
 	email = johannes.huwald@gmail.com
 [core]
 	editor = vim
+[submodule]
+	recurse = true
+[status]
+	submoduleSummary = true
+[init]
+	defaultBranch = main
