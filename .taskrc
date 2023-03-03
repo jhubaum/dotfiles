@@ -68,7 +68,7 @@ report.custom.weekly.filter=+work and ((status:completed and end.after:now-1wk) 
 
 context.work.read=+work or +nvim
 context.work=+work or +nvim
-context.workf.read=(+work or +nvim) and (+next or +ACTIVE or scheduled.before:now+1wk or +PRIORITY)
+context.workf.read=(+work or +nvim) and (+ACTIVE or scheduled.before:now+1wk or +PRIORITY)
 context.private.read=-work
 context.private=-work
 
