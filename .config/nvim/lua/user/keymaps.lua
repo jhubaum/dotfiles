@@ -34,9 +34,12 @@ keymap('', '<leader>wL', ':vsplit<CR>:wincmd l<CR>', silent)
 
 -- keymappings around code and lsp interactions
 keymap('', '<leader>cd', ':lua vim.lsp.buf.definition()<CR>')
-keymap('', '<leader>cr', ':lua vim.lsp.buf.references()<CR>')
+keymap('', '<leader>cD', ':lua vim.lsp.buf.references()<CR>')
 keymap('', '<leader>cl', ':lua vim.lsp.buf.code_action()<CR>')
 keymap('', '<leader>cf', ':lua vim.lsp.buf.format()<CR>')
+keymap('', '<leader>cr', ':lua vim.lsp.buf.rename()<CR>')
+keymap('', '<leader>cn', ':lua vim.diagnostic.goto_next()<CR>')
+keymap('', '<leader>cN', ':lua vim.diagnostic.goto_prev()<CR>')
 
 -- keymappings aroung git
 keymap('', '<leader>gd', ':DiffviewOpen HEAD -- %<CR>')

@@ -41,13 +41,19 @@ packer.init {
 return packer.startup(function(use)
   use "wbthomason/packer.nvim" -- Have packer manage itself
 
+  use 'williamboman/mason.nvim'
+  use 'williamboman/mason-lspconfig.nvim'
+
   -- Lsp
   use "neovim/nvim-lspconfig"
   use "anott03/nvim-lspinstall"
 
+  -- Rust
+  use 'simrat39/rust-tools.nvim'
+
   use {
     'nvim-telescope/telescope.nvim', tag = '0.1.0',
-    requires = { {'nvim-lua/plenary.nvim'} }
+    requires = { { 'nvim-lua/plenary.nvim' } }
   }
 
   -- Fuzzy finder
@@ -55,11 +61,23 @@ return packer.startup(function(use)
   use "nvim-lua/plenary.nvim"
   use "jremmen/vim-ripgrep"
 
+  -- Completion framework:
+  use 'hrsh7th/nvim-cmp'
 
+  -- LSP completion source:
+  use 'hrsh7th/cmp-nvim-lsp'
+
+  -- Useful completion sources:
+  use 'hrsh7th/cmp-nvim-lua'
+  use 'hrsh7th/cmp-nvim-lsp-signature-help'
+  use 'hrsh7th/cmp-vsnip'
+  use 'hrsh7th/cmp-path'
+  use 'hrsh7th/cmp-buffer'
+  use 'hrsh7th/vim-vsnip'
 
   use {
-        "nvim-treesitter/nvim-treesitter",
-        run = function() require("nvim-treesitter.install").update({ with_sync = true }) end,
+    "nvim-treesitter/nvim-treesitter",
+    run = function() require("nvim-treesitter.install").update({ with_sync = true }) end,
   }
   use { 'sindrets/diffview.nvim', requires = 'nvim-lua/plenary.nvim' }
   use "sheerun/vim-polyglot"
