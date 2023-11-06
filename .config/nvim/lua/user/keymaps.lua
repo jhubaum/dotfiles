@@ -7,6 +7,8 @@ vim.g.mapleader = ' '
 
 -- Better paste
 keymap('v', 'p', '"_dP', silent)
+keymap('v', '<C-d>', '<C-d>zz', silent)
+keymap('v', '<C-u>', '<C-u>zz', silent)
 
 -- disable arrow keys for navigation
 keymap('', '<up>', '<nop>', silent)
