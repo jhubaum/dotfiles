@@ -44,9 +44,6 @@ data.location=~/.task
 uda.jira.type=string
 uda.jira.label=Jira
 
-uda.gitshai.type=string
-uda.gitshai.label=SHAI
-
 uda.reviewed.type=date
 uda.reviewed.label=Reviewed
 
@@ -55,8 +52,8 @@ report._reviewed.columns=uuid
 report._reviewed.sort=reviewed+,modified+
 report._reviewed.filter=( reviewed.none: or reviewed.before:now-6days ) and ( +PENDING or +WAITING )
 
-report.all.labels=ID,St,UUID,A,Age,Done,D,P,Project,Tags,R,Wait,Sch,Due,Until,Description,Ticket,SHAI
-report.all.columns=id,status.short,uuid.short,start.active,entry.age,end.age,depends.indicator,priority,project.parent,tags.count,recur.indicator,wait.remaining,scheduled.remaining,due,until.remaining,description,jira,gitshai
+report.next.labels=ID,Age,P,Project,Tags,Due,Description,Ticket,Urg
+report.next.columns=id,entry.age,priority,project.parent,tags,due,description,jira,urgency
 
 news.version=2.6.0
 
@@ -72,4 +69,4 @@ context.workf.read=(+work or +nvim) and (+ACTIVE or scheduled.before:now+1wk or 
 context.private.read=-work
 context.private=-work
 
-context=private
+context=work
