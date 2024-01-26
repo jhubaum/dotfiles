@@ -50,3 +50,8 @@ keymap('', '<leader>gq', ':DiffviewClose<CR>')
 -- keymappings for project and file navigation
 keymap('', '<leader>pf', ':lua require"telescope.builtin".find_files()<CR>')
 keymap('', '<leader>ps', ':lua require"telescope.builtin".live_grep()<CR>')
+
+keymap('i', '<C-J>', 'copilot#Accept("<CR>")', { expr = true, replace_keycodes = false })
+keymap("i", "<C-H>", 'copilot#Previous()', { silent = true, expr = true })
+keymap("i", "<C-L>", 'copilot#Next()', { silent = true, expr = true })
+vim.g.copilot_no_tab_map = true

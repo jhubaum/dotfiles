@@ -52,7 +52,7 @@ return packer.startup(function(use)
   use 'simrat39/rust-tools.nvim'
 
   use {
-    'nvim-telescope/telescope.nvim', tag = '0.1.0',
+    'nvim-telescope/telescope.nvim',
     requires = { { 'nvim-lua/plenary.nvim' } }
   }
 
@@ -74,6 +74,12 @@ return packer.startup(function(use)
   use 'hrsh7th/cmp-path'
   use 'hrsh7th/cmp-buffer'
   use 'hrsh7th/vim-vsnip'
+
+  use 'github/copilot.vim'
+
+  -- git
+  use 'tpope/vim-fugitive'
+  use 'f-person/git-blame.nvim'
 
   use {
     "nvim-treesitter/nvim-treesitter",
