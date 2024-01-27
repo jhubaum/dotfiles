@@ -221,3 +221,5 @@ exec --no-startup-id flameshot
 exec --no-startup-id redshift -l 52:08 -t 6500K:3000K
 exec --no-startup-id xautolock -locker $path/scripts/lockscreen.sh
 exec --no-startup-id expressvpn connect
+# xrandr hack to mirror displays. There has to be a better place for this
+exec --no-startup-id xrandr --output HDMI-1 --same-as DVI-I-1
