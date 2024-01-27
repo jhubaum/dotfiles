@@ -9,7 +9,7 @@ vim.cmd "highlight NormalNC guibg=000000"
 
 local configs = require 'nvim-treesitter.configs'
 configs.setup {
-  ensure_installed = { 'python', 'cpp', 'lua', 'rust', 'markdown' },
+  ensure_installed = { 'python', 'cpp', 'lua', 'rust', 'markdown', 'ocaml' },
   --highlight = {
   --  enable = true,
   --}
@@ -26,6 +26,11 @@ local default_config = {
 lspconfig.clangd.setup {}
 lspconfig.pylsp.setup {}
 lspconfig.lua_ls.setup {}
+lspconfig.ocamllsp.setup({
+    cmd = { "ocamllsp" },
+    filetypes = { "ocaml", "ocaml.menhir", "ocaml.interface", "ocaml.ocamllex", "reason", "dune" },
+    root_dir = lspconfig.util.root_pattern("*.opam", "esy.json", "package.json", ".git", "dune-project", "dune-workspace"),
+})
 require("rust-tools").setup {}
 
 vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
