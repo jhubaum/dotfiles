@@ -69,4 +69,4 @@ context.workf.read=(+work or +nvim) and (+ACTIVE or scheduled.before:now+1wk or 
 context.private.read=-work
 context.private=-work
 
-context=work
+context=private
