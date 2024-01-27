@@ -4,4 +4,5 @@ import = [
 [window]
 decorations = "None"
 opacity = 0.85
-option_as_alt = "OnlyLeft"
+[font]
+size = 8
