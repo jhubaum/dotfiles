@@ -1,2 +1,5 @@
 plugin/
 undodir/
+
+!after/*
+!lua/*

@@ -23,8 +23,8 @@ vim.wo.relativenumber = true
 vim.wo.signcolumn = 'yes'
 vim.wo.wrap = true
 
-vim.cmd "set clipboard+=unnamedplus"
 
+vim.opt.scrolloff = 8
 
 --Set completeopt to have a better completion experience
 -- :help completeopt
@@ -59,3 +59,5 @@ vim.cmd([[
 set signcolumn=yes
 autocmd CursorHold * lua vim.diagnostic.open_float(nil, { focusable = false })
 ]])
+
+vim.g.mapleader = ' '
