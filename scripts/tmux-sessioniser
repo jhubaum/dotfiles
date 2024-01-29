@@ -13,8 +13,8 @@ with_worktrees() {
         echo $folder
         return
     fi
-    echo $(git --git-dir="$folder/.git" worktree list | awk '{print $1 ":\t\t" $3}')
-    return
+    worktrees=$(git --git-dir="$folder/.git" worktree list | awk '{print $1 ":\t\t" $3}')
+    echo $worktrees
 }
 
 project_folders() {
@@ -28,6 +28,7 @@ if [[ $# -eq 1 ]]; then
     selected=$1
 else
     selected=$(project_folders $PROJECT_FOLDERS | fzf)
+    selected=$(selected%%:*)
 fi
 
 if [[ -z $selected ]]; then
