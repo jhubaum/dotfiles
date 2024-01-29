@@ -1,20 +1,25 @@
 require("mason").setup {}
-require("mason-lspconfig").setup()
 
 local lspconfig = require 'lspconfig'
-local default_config = {
-  on_attach = custom_on_attach,
+local masonlsp = require("mason-lspconfig")
+masonlsp.setup()
+masonlsp.setup_handlers {
+  function (server_name) -- Default handler
+    lspconfig[server_name].setup {}
+  end,
+  ["rust_analyzer"] = function ()
+    require("rust-tools").setup {}
+  end
 }
+
 -- setup language servers here
+-- TODO: add a check that mason does not already have a handler for the server
 lspconfig.clangd.setup {}
-lspconfig.pylsp.setup {}
-lspconfig.lua_ls.setup {}
 lspconfig.ocamllsp.setup({
     cmd = { "ocamllsp" },
     filetypes = { "ocaml", "ocaml.menhir", "ocaml.interface", "ocaml.ocamllex", "reason", "dune" },
     root_dir = lspconfig.util.root_pattern("*.opam", "esy.json", "package.json", ".git", "dune-project", "dune-workspace"),
 })
-require("rust-tools").setup {}
 
 vim.lsp.handlers["textDocument/publishDiagnostics"] = vim.lsp.with(
   vim.lsp.diagnostic.on_publish_diagnostics, {
