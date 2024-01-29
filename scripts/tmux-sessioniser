@@ -1,34 +1,36 @@
 #!/usr/bin/env bash
 
 with_worktrees() {
-    local folder=$(realpath "$1")
+    local folder
+    folder="$(realpath "$1")"
     if [ ! -d "$folder/.git" ]; then
         # folder is not a git repository
-        echo $folder
+        echo "$folder"
         return
     fi
     worktree_count=$(git --git-dir="$folder/.git" worktree list | wc -l)
-    if [ $worktree_count -eq 1 ]; then
+    if [ "$worktree_count" -eq 1 ]; then
         # repo only has one worktree
-        echo $folder
+        echo "$folder"
         return
     fi
     worktrees=$(git --git-dir="$folder/.git" worktree list | awk '{print $1 ":\t\t" $3}')
-    echo $worktrees
+    echo "$worktrees"
 }
 
 project_folders() {
-    local projects=$@
-    for project in $(find $projects -mindepth 1 -maxdepth 1 -type d); do
-        echo "$(with_worktrees $project)"
-    done
+    project-folders > .tmp
+    while IFS= read -r folder; do
+        with_worktrees "$folder"
+    done < .tmp
+    rm .tmp
 }
 
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
-    selected=$(project_folders $PROJECT_FOLDERS | fzf)
-    selected=$(selected%%:*)
+    selected=$(project_folders | fzf)
+    selected="${selected%%:*}"
 fi
 
 if [[ -z $selected ]]; then
@@ -39,12 +41,12 @@ selected_name=$(basename "$selected" | tr . _)
 tmux_running=$(pgrep tmux)
 
 if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
-    tmux new-session -s $selected_name -c $selected
+    tmux new-session -s "$selected_name" -c "$selected"
     exit 0
 fi
 
-if ! tmux has-session -t=$selected_name 2> /dev/null; then
-    tmux new-session -ds $selected_name -c $selected
+if ! tmux has-session -t="$selected_name" 2> /dev/null; then
+    tmux new-session -ds "$selected_name" -c "$selected"
 fi
 
-tmux switch-client -t $selected_name
+tmux switch-client -t "$selected_name"

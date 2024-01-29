@@ -17,7 +17,7 @@ antigen theme af-magic
 
 antigen apply
 
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/scripts/:$PATH"
 
 export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
@@ -26,6 +26,6 @@ eval "$(pyenv init -)"
 # opam configuration
 [[ ! -r /home/johannes/.opam/opam-init/init.zsh ]] || source /home/johannes/.opam/opam-init/init.zsh  > /dev/null 2> /dev/null
 
-export PROJECT_FOLDERS="$HOME/projects $HOME/.config"
+export PROJECT_FOLDERS="$HOME/projects:$HOME/.config"
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
