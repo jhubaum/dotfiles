@@ -53,7 +53,7 @@ report._reviewed.sort=reviewed+,modified+
 report._reviewed.filter=( reviewed.none: or reviewed.before:now-6days ) and ( +PENDING or +WAITING )
 
 report.next.labels=ID,Age,P,Project,Tags,Due,Description,Ticket,Urg
-report.next.columns=id,entry.age,priority,project.parent,tags,due,description,jira,urgency
+report.next.columns=id,entry.age,priority,project.parent,tags,due.relative,description,jira,urgency
 
 news.version=2.6.0
 
