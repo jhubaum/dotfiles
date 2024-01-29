@@ -19,11 +19,9 @@ with_worktrees() {
 }
 
 project_folders() {
-    project-folders > .tmp
     while IFS= read -r folder; do
         with_worktrees "$folder"
-    done < .tmp
-    rm .tmp
+    done < <(project-folders)
 }
 
 if [[ $# -eq 1 ]]; then
