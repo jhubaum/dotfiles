@@ -1,0 +1,57 @@
+#!/bin/bash
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <env>"
+    exit 1
+fi
+
+environment=$1
+
+if [[ "$environment" != "deb" && "$environment" != "mac" ]]; then
+    echo "Invalid environment: $environment"
+    echo "Allowed environments: deb, mac"
+    exit 1
+fi
+
+function symlink() {
+  if [ -e "$2" ]; then
+    echo "'$2' already exists, skipping..."
+  else
+    ln -s "$1" "$2"
+    echo "Symlinked '$1' to '$2'"
+  fi
+}
+
+REPO_ROOT="$(realpath "$(dirname "$0")/..")"
+
+
+while IFS= read -r dotfile; do
+  filename="$(basename "$dotfile")"
+  if [[ $environment == "mac" ]]; then
+    # skip zsh and git config, since I manually set them up on mac
+    if [[ $filename == ".zshrc" || 
+      $filename == ".gitconfig" ||
+      $filename == ".zshenv" ]]; then
+            continue
+    fi
+  fi
+  symlink "$dotfile" "$HOME/$filename"
+done < <(find "$REPO_ROOT/dotfiles" -type f)
+
+symlink "$REPO_ROOT/nvim" "$HOME/.config/nvim"
+symlink "$REPO_ROOT/alacritty" "$HOME/.config/alacritty"
+symlink "$REPO_ROOT/scripts" "$HOME/.local/scripts"
+if [[ $environment == "deb" ]]; then
+  symlink "$REPO_ROOT/i3" "$HOME/.config/i3"
+fi
+
+if [[ $environment == "deb" ]]; then
+  echo "linking desktop stuff is NOT IMPLEMENTED YET"
+  # symlink desktop files (spotify) for tower
+  # .local/share/applications/spotify.desktop
+
+  # symlink x configs for tower
+fi
+
+
+# symlink alacritty, i3, nvim folders into `~/.config`
