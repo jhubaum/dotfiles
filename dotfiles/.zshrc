@@ -26,6 +26,6 @@ eval "$(pyenv init -)"
 # opam configuration
 [[ ! -r /home/johannes/.opam/opam-init/init.zsh ]] || source /home/johannes/.opam/opam-init/init.zsh  > /dev/null 2> /dev/null
 
-export PROJECT_FOLDERS="$HOME/projects:$HOME/.config"
+export PROJECT_FOLDERS="$HOME/projects"
 
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
