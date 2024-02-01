@@ -50,8 +50,5 @@ if [[ $environment == "deb" ]]; then
   # symlink desktop files (spotify) for tower
   # .local/share/applications/spotify.desktop
 
-  # symlink x configs for tower
+  # symlink x configs for tower (actually, copy it?)
 fi
-
-
-# symlink alacritty, i3, nvim folders into `~/.config`
