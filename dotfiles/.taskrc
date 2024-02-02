@@ -63,8 +63,8 @@ report.custom.weekly.labels=ID,UUID,Project,Desc,Status,Active,GithubMR,Ticket,T
 report.custom.weekly.sort=project+\/,status+,entry+
 report.custom.weekly.filter=+work and ((status:completed and end.after:now-1wk) or (status:pending and (+next or +ACTIVE or due.before:now+1wk or scheduled.before:now+1wk)))
 
-context.work.read=+work or +nvim
-context.work=+work or +nvim
+context.work.read=+work or +nvim or +dotfile
+context.work=+work or +nvim or +dotfile
 context.workf.read=(+work or +nvim) and (+ACTIVE or scheduled.before:now+1wk or +PRIORITY)
 context.private.read=-work
 context.private=-work
