@@ -7,6 +7,7 @@ for folder in env.get("PROJECT_FOLDERS", "").split(":"):
     folder = (Path.home() / folder).resolve()
     if not folder.is_dir():
         continue
+    print(folder)
     for p in folder.iterdir():
         if p.is_dir():
             print(p)
