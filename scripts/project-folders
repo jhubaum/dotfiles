@@ -4,6 +4,9 @@ from os import environ as env
 from pathlib import Path
 
 for folder in env.get("PROJECT_FOLDERS", "").split(":"):
-    for p in (Path.home() / folder).iterdir():
+    folder = (Path.home() / folder).resolve()
+    if not folder.is_dir():
+        continue
+    for p in folder.iterdir():
         if p.is_dir():
-            print(p.resolve())
+            print(p)
