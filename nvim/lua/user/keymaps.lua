@@ -34,11 +34,9 @@ vim.keymap.set('', '<left>', '<nop>', silent)
 vim.keymap.set('', '<right>', '<nop>', silent)
 
 
--- vim.keymap.setpings for opening files relative to current buffer
-vim.keymap.set('', ',e', ':e <C-R>=expand("%:p:h") . "/" <CR>', silent)
-
 -- vim.keymap.setpings around buffers
 vim.keymap.set('', '<leader>bq', ':bp|bd#<CR>', silent) -- Close buffer im current window without closing the window itself
+vim.keymap.set('', '<leader>bl', '<C-^>', silent) -- Move to the top buffer
 
 vim.keymap.set('', '<C-w>h', ':wincmd h<CR>', silent)
 vim.keymap.set('', '<C-w>j', ':wincmd j<CR>', silent)
