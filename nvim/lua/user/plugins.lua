@@ -79,7 +79,6 @@ return packer.startup(function(use)
 
   -- git
   use 'tpope/vim-fugitive'
-  use 'f-person/git-blame.nvim'
 
   use {
     "nvim-treesitter/nvim-treesitter",
