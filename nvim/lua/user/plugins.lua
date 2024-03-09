@@ -77,6 +77,28 @@ return packer.startup(function(use)
 
   use 'github/copilot.vim'
 
+  use({
+    "epwalsh/obsidian.nvim",
+    tag = "*",  -- recommended, use latest release instead of latest commit
+    requires = {
+      "nvim-lua/plenary.nvim",
+    },
+    config = function()
+      require("obsidian").setup({
+        ui = {
+          -- TODO: Look more into https://github.com/epwalsh/obsidian.nvim for config options
+          enable = false
+        },
+        workspaces = {
+          {
+            name = "personal",
+            path = "~/notes"
+          }
+        }
+      })
+    end,
+  })
+
   -- git
   use 'tpope/vim-fugitive'
 
