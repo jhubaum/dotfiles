@@ -20,7 +20,33 @@ masonlsp.setup_handlers {
   end,
   ["rust_analyzer"] = function ()
     require("rust-tools").setup {}
-  end
+  end,
+  ["pylsp"] = function ()
+    lspconfig["pylsp"].setup({
+      settings = {
+        pylsp = {
+          plugins = {
+            pycodestyle = { enabled = false },
+          },
+        },
+        python = {
+          analysis = {
+            -- Ignore all files for analysis to exclusively use Ruff for linting
+            ignore = { '*' },
+          },
+        },
+      },
+    })
+  end,
+  ["ruff_lsp"] = function ()
+    lspconfig["ruff_lsp"].setup {
+      init_options = {
+        settings = {
+          args = {},
+        }
+      }
+    }
+  end,
 }
 
 -- setup language servers here

@@ -77,6 +77,8 @@ return packer.startup(function(use)
 
   use 'github/copilot.vim'
 
+  use 'dense-analysis/ale'
+
   use({
     "epwalsh/obsidian.nvim",
     tag = "*",  -- recommended, use latest release instead of latest commit
