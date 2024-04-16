@@ -61,6 +61,12 @@ return packer.startup(function(use)
   use "nvim-lua/plenary.nvim"
   use "jremmen/vim-ripgrep"
 
+  use {
+    "ThePrimeagen/harpoon",
+    branch = "harpoon2",
+    requires = { {"nvim-lua/plenary.nvim"} }
+  }
+
   -- Completion framework:
   use 'hrsh7th/nvim-cmp'
 
