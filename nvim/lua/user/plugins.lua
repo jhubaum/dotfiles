@@ -48,6 +48,8 @@ return packer.startup(function(use)
   use "neovim/nvim-lspconfig"
   use "anott03/nvim-lspinstall"
 
+  use 'mfussenegger/nvim-lint'
+
   -- Rust
   use 'simrat39/rust-tools.nvim'
 
@@ -82,8 +84,6 @@ return packer.startup(function(use)
   use 'hrsh7th/vim-vsnip'
 
   use 'github/copilot.vim'
-
-  use 'dense-analysis/ale'
 
   use({
     "epwalsh/obsidian.nvim",
