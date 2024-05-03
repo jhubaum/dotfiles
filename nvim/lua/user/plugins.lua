@@ -83,8 +83,6 @@ return packer.startup(function(use)
   use 'hrsh7th/cmp-buffer'
   use 'hrsh7th/vim-vsnip'
 
-  use 'github/copilot.vim'
-
   use({
     "epwalsh/obsidian.nvim",
     tag = "*",  -- recommended, use latest release instead of latest commit
