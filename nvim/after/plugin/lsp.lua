@@ -123,7 +123,8 @@ cmp.setup({
 -- vim.keymap.setpings around code and lsp interactions
 vim.keymap.set('', '<leader>cd', ':lua vim.lsp.buf.definition()<CR>')
 vim.keymap.set('', '<leader>cD', ':lua vim.lsp.buf.references()<CR>')
-vim.keymap.set('', '<leader>cl', ':lua vim.lsp.buf.code_action()<CR>')
+vim.keymap.set('', '<leader>ca', ':lua vim.lsp.buf.code_action()<CR>')
+vim.keymap.set('', '<leader>ch', ':lua vim.lsp.buf.signature_help()<CR>')
 vim.keymap.set('', '<leader>cf', ':lua vim.lsp.buf.format()<CR>')
 vim.keymap.set('', '<leader>cr', ':lua vim.lsp.buf.rename()<CR>')
 

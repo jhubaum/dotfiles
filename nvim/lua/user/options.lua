@@ -1,7 +1,6 @@
 vim.o.termguicolors = true
 vim.o.syntax = 'on'
 vim.o.errorbells = false
-vim.o.smartcase = true
 vim.o.showmode = false
 vim.bo.swapfile = false
 vim.o.backup = false
@@ -23,7 +22,17 @@ vim.wo.relativenumber = true
 vim.wo.signcolumn = 'yes'
 vim.wo.wrap = true
 
+-- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
 
+-- Sets how neovim will display certain whitespace characters in the editor.
+--  See `:help 'list'`
+--  and `:help 'listchars'`
+vim.opt.list = true
+vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
+
+vim.opt.cursorline = true
 vim.opt.scrolloff = 8
 
 --Set completeopt to have a better completion experience
