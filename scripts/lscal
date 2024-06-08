@@ -1,0 +1,3 @@
+#!/bin/bash
+
+khal list "$(date +'%Y-%m-%d')" "$(date -d "+1 month" +'%Y-%m-%d')"
