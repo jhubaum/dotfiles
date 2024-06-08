@@ -43,6 +43,7 @@ symlink "$REPO_ROOT/alacritty" "$HOME/.config/alacritty"
 symlink "$REPO_ROOT/scripts" "$HOME/.local/scripts"
 if [[ $environment == "deb" ]]; then
   symlink "$REPO_ROOT/i3" "$HOME/.config/i3"
+  symlink "$REPO_ROOT/vdirsyncer" "$HOME/.config/vdirsyncer"
 fi
 
 if [[ $environment == "deb" ]]; then

@@ -1,0 +1,20 @@
+[general]
+status_path = "~/.vdirsyncer/status/"
+
+[pair calendar]
+a = "remote_caldav"
+b = "local_caldav"
+collections = ["from a", "from b"]
+conflict_resolution = ["command", "vimdiff"]
+metadata = ["color"]
+
+[storage local_caldav]
+type = "filesystem"
+path = "~/.calendars/"
+fileext = ".ics"
+
+[storage remote_caldav]
+type = "caldav"
+username.fetch = ["command", "cred", "caldav_user"]
+url.fetch = ["command", "cred", "caldav_url"]
+password.fetch = ["prompt", "CalDav password"]
