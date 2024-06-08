@@ -22,6 +22,10 @@ function symlink() {
   fi
 }
 
+function symlink_folder() {
+  symlink "$REPO_ROOT/$1" "$HOME/.config/$1"
+}
+
 REPO_ROOT="$(realpath "$(dirname "$0")/..")"
 
 
@@ -44,6 +48,7 @@ symlink "$REPO_ROOT/scripts" "$HOME/.local/scripts"
 if [[ $environment == "deb" ]]; then
   symlink "$REPO_ROOT/i3" "$HOME/.config/i3"
   symlink "$REPO_ROOT/vdirsyncer" "$HOME/.config/vdirsyncer"
+  symlink_folder "khal"
 fi
 
 if [[ $environment == "deb" ]]; then
