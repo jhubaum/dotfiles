@@ -1,7 +1,6 @@
 -- Based on https://github.com/tjdevries/config.nvim/blob/master/lua/custom/completion.lua
 
--- TODO: Start using snippets at some point?
--- require "user.snippets"
+require "user.snippets"
 
 vim.opt.completeopt = { "menu", "menuone", "noselect" }
 vim.opt.shortmess:append "c"
@@ -47,15 +46,11 @@ cmp.setup {
           item.menu = menu_icon[entry.source.name]
           return item
       end,
-  }
-
-
+  },
   -- Enable luasnip to handle snippet expansion for nvim-cmp
-  --[[
   snippet = {
     expand = function(args)
       vim.snippet.expand(args.body)
-    end,
-  },
-  ]]--
+    end
+  }
 }
