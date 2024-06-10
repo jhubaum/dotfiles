@@ -3,7 +3,9 @@
 
 local ls = require "luasnip"
 
-vim.snippet.expand = ls.lsp_expand
+vim.snippet = {
+    expand = ls.lsp_expand
+}
 
 ---@diagnostic disable-next-line: duplicate-set-field
 vim.snippet.active = function(filter)
