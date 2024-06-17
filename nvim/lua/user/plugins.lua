@@ -106,6 +106,8 @@ return packer.startup(function(use)
     end,
   })
 
+  use "stevearc/oil.nvim"
+
   -- git
   use 'tpope/vim-fugitive'
 

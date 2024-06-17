@@ -3,8 +3,6 @@ local silent = { silent = true }
 --Remap space as leader key
 vim.keymap.set('', '<Space>', '<Nop>', silent)
 
-vim.keymap.set('n', '<leader>pv', vim.cmd.Ex)
-
 -- Better paste
 vim.keymap.set('v', 'p', '"_dp')
 vim.keymap.set('v', 'P', '"_dP')
