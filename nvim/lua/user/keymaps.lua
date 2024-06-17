@@ -36,14 +36,12 @@ vim.keymap.set('', '<right>', '<nop>', silent)
 vim.keymap.set('', '<leader>bq', ':bp|bd#<CR>', silent) -- Close buffer im current window without closing the window itself
 vim.keymap.set('', '<leader>bl', '<C-^>', silent) -- Move to the top buffer
 
-vim.keymap.set('', '<C-w>h', ':wincmd h<CR>', silent)
-vim.keymap.set('', '<C-w>j', ':wincmd j<CR>', silent)
-vim.keymap.set('', '<C-w>k', ':wincmd k<CR>', silent)
-vim.keymap.set('', '<C-w>l', ':wincmd l<CR>', silent)
+vim.keymap.set('', '<C-h>', ':wincmd h<CR>', silent)
+vim.keymap.set('', '<C-j>', ':wincmd j<CR>', silent)
+vim.keymap.set('', '<C-k>', ':wincmd k<CR>', silent)
+vim.keymap.set('', '<C-l>', ':wincmd l<CR>', silent)
 
 vim.keymap.set('', '<C-w>H', ':vsplit<CR>', silent)
 vim.keymap.set('', '<C-w>J', ':split<CR>:wincmd j<CR>', silent)
 vim.keymap.set('', '<C-w>K', ':split<CR>', silent)
 vim.keymap.set('', '<C-w>L', ':vsplit<CR>:wincmd l<CR>', silent)
-
-
