@@ -17,6 +17,10 @@ antigen theme af-magic
 
 antigen apply
 
+cr () {
+  cd $(git rev-parse --show-toplevel)
+}
+
 export PYENV_ROOT="$HOME/.pyenv"
 command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
