@@ -1,0 +1,150 @@
+#!/usr/bin/env python
+
+from argparse import ArgumentParser
+from typing import Optional
+import subprocess
+
+
+def get_stack(source):
+    out = subprocess.run(
+        ["git", "log", '--pretty="%d"', f"{source}..HEAD"], stdout=subprocess.PIPE
+    )
+
+    def parse_branch_name(line: str) -> Optional[str]:
+        line = line.strip()
+        if len(line) == 0:
+            return None
+
+        assert line[0] == '"' and line[-1] == '"'
+        line = line[1:-1].strip()
+        if len(line) == 0:
+            return None
+
+        assert line[0] == "(" and line[-1] == ")"
+        branches = [it.strip() for it in line[1:-1].split(",")]
+        if len(branches) == 0:
+            return None
+
+        HEAD_IDENT = "HEAD -> "
+        updated_list = []
+        for branch in branches:
+            if branch.startswith("origin/"):
+                continue
+            if branch.startswith(HEAD_IDENT):
+                updated_list.append(branch[len(HEAD_IDENT) :])
+                continue
+            updated_list.append(branch)
+        assert (
+            len(updated_list) == 1
+        ), "Branch setup is complicated, which is not yet supported"
+        return updated_list[0]
+
+    stack = []
+    for line in out.stdout.decode("utf-8").split("\n"):
+        branch = parse_branch_name(line)
+        if branch is not None:
+            stack.append(branch)
+    stack.append(source)
+    return stack
+
+
+def exec_per_branch(source: str):
+    current_branch_res = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"], stdout=subprocess.PIPE
+    )
+    current_branch_res.check_returncode()
+    current_branch = current_branch_res.stdout.decode("utf-8").strip()
+
+    try:
+        has_changes = False
+        subprocess.run(["git", "diff", "--quiet"]).check_returncode()
+    except subprocess.CalledProcessError:
+        has_changes = True
+
+    if has_changes:
+        subprocess.run(["git", "stash"]).check_returncode()
+    prev = None
+    for elem in reversed(get_stack(source)):
+        subprocess.run(["git", "switch", elem]).check_returncode()
+        yield prev, elem
+        prev = elem
+
+    subprocess.run(["git", "switch", current_branch]).check_returncode()
+    if has_changes:
+        subprocess.run(["git", "stash", "pop"]).check_returncode()
+
+
+def show(args):
+    stack = get_stack(args.source)
+    if len(stack) > 0:
+        stack[-1] += " (source)"
+    for elem in stack:
+        print(elem)
+
+
+def rebase(args):
+    for prev, _ in exec_per_branch(args.source):
+        if prev is None:
+            continue
+        subprocess.run(["git", "rebase", "-i", prev]).check_returncode()
+
+
+def pull(args):
+    for _, branch in exec_per_branch(args.source):
+        subprocess.run(["git", "pull"]).check_returncode()
+
+
+def push(args):
+    for prev, branch in exec_per_branch(args.source):
+        # don't push for the source
+        if prev is None:
+            continue
+        call_args = ["git", "push"]
+        if args.force:
+            call_args.append("--force")
+        subprocess.run(call_args).check_returncode()
+
+
+def create_parser():
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--source",
+        "-s",
+        help="The git identifier that is used as the root of the stack",
+        default="main",
+    )
+    subcommands = parser.add_subparsers()
+
+    show_parser = subcommands.add_parser("show")
+    show_parser.set_defaults(func=show)
+
+    rebase_parser = subcommands.add_parser(
+        "rebase", description="Rebase each branch to its previous branch in the stack"
+    )
+    rebase_parser.set_defaults(func=rebase)
+    rebase_parser.add_argument(
+        "--interactive", "-i", action="store_true", help="Run with interactive rebase"
+    )
+    rebase_parser.add_argument(
+        "--autosquash", action="store_true", help="Run rebases with --autosquash"
+    )
+
+    push_parser = subcommands.add_parser("push")
+    push_parser.add_argument("--force", action="store_true", help="Run a force push")
+    push_parser.set_defaults(func=push)
+
+    pull_parser = subcommands.add_parser("pull")
+    pull_parser.set_defaults(func=pull)
+
+    return parser
+
+
+if __name__ == "__main__":
+    parser = create_parser()
+    args = parser.parse_args()
+    try:
+        func = args.func
+    except AttributeError:
+        parser.print_usage()
+        exit(1)
+    func(args)
