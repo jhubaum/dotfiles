@@ -34,9 +34,12 @@ def get_stack(source):
                 updated_list.append(branch[len(HEAD_IDENT) :])
                 continue
             updated_list.append(branch)
+        if len(updated_list) == 0:
+            return None
+
         assert (
             len(updated_list) == 1
-        ), "Branch setup is complicated, which is not yet supported"
+        ), f"Branch setup is complicated, which is not yet supported ({','.join(updated_list)})"
         return updated_list[0]
 
     stack = []
