@@ -1,3 +1,9 @@
+# Directory structure
+- dotfiles: Files that are linked as hidden files to home directory
+- configs: Folders that are symlinked to `~/.config` directory
+- bin: Scripts to work with this repo
+- scripts: Scripts available on the entire shell after this repo is installed
+
 # Tools and docs to setup the system after a fresh installation
 ## Checklist to recreate the setup
 - Install the base system
@@ -7,13 +13,10 @@
 - Install tools to execute the installation script: `apt install git sudo`
 - Add myself to sudoers group (`usermod -aG sudo johannes`)
 - Log out from root user and log in as normal user
-- Clone this repo (with https) (with `--bare`): `git clone --bare <git-repo-url> $HOME/.cfg`
-- Define config alias in current shell scope: `alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'`
-- Checkout the actual content from the configs `config checkout`
-- Make sure untracked files are ignored: `config config status.showUntrackedFiles no`
-- Run the installation script `.dotsetuptools/install.sh`
+- Clone this repo  (ssh). TODO: Do I need to set up ssh keys for github?
+- Run `bin/install`
+- Run `bin/symlink`
 - Log out and in again to update shell config
-- Setup ssh key and update remote url of config repo checkout
 - Concratulations, you have a fully functional system now.  
   There are, however, a few steps you currently need to perform manually
 
@@ -23,10 +26,6 @@
 - Setup thunderbird and firefox (details below)  
   - TODO: I can probably upload the config files directly to this repo. Figure out how
 - Install Obsidian (https://obsidian.md/download)
-- Setup express vpn
-  - log in on website and follow instructions
-  - Run `expressvpn activate`
-  - Run `expressvpn install-firefox-extension`
 
 ## Setup the internet connection
 ### On a tower (i.e only using Lan)

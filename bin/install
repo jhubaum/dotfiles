@@ -1,6 +1,9 @@
 # There probably is a better way to comment what each package is required for, but current me
 # (past me when I'm reading this) doesn't want to spend any time on this.
 
+echo '"EXTERNAL_CONFIG_PATH" no longer exists. This script needs to be refactored. Maybe have a single file for dependencies installed by apt'
+echo '"And then use extra scripts / functions for tools that are installed differently (e.g. via cargo)
+exit 1
 EXTERNAL_CONFIG_PATH="$(dirname $0)/configs"
 
 # window manager and dependencies
@@ -11,6 +14,7 @@ sudo apt install -y \
 
 # copy x configs to their correct places
 echo "Copy X config files to the system"
+# The new file for this is `./data/00-keyboard.conf`
 sudo cp "$EXTERNAL_CONFIG_PATH/00-keyboard.conf" /etc/X11/xorg.conf.d
 
 
