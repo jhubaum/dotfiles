@@ -35,6 +35,7 @@ vim.keymap.set('', '<right>', '<nop>', silent)
 -- vim.keymap.setpings around buffers
 vim.keymap.set('', '<leader>bq', ':bp|bd#<CR>', silent) -- Close buffer im current window without closing the window itself
 vim.keymap.set('', '<leader>bl', '<C-^>', silent) -- Move to the top buffer
+vim.keymap.set('', '<leader><BS>', ':b#<CR>', silent) -- Switch to previous buffer
 
 vim.keymap.set('', '<C-h>', ':wincmd h<CR>', silent)
 vim.keymap.set('', '<C-j>', ':wincmd j<CR>', silent)
