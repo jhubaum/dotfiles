@@ -55,7 +55,7 @@ report._reviewed.filter=( reviewed.none: or reviewed.before:now-6days ) and ( +P
 report.next.labels=ID,Age,P,Project,Tags,Due,Description,Ticket,Urg
 report.next.columns=id,entry.age,priority,project.parent,tags,due.relative,description,jira,urgency
 
-news.version=2.6.0
+news.version=3.4.1
 
 report.custom.weekly.description=A list of all tasks that should appear in my weekly report
 report.custom.weekly.columns=id,uuid.short,project,description,status,start.active,gitshai,jira,tags
