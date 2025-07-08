@@ -16,6 +16,7 @@ vim.lsp.config.pylsp = {
     pylsp = {
       plugins = {
         pycodestyle = { enabled = false },
+        mccabe = { enabled = false }
       },
     },
     python = {
