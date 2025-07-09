@@ -46,3 +46,17 @@ vim.keymap.set('', '<C-w>H', ':vsplit<CR>', silent)
 vim.keymap.set('', '<C-w>J', ':split<CR>:wincmd j<CR>', silent)
 vim.keymap.set('', '<C-w>K', ':split<CR>', silent)
 vim.keymap.set('', '<C-w>L', ':vsplit<CR>:wincmd l<CR>', silent)
+
+
+-- create a file relative to current buffer
+vim.api.nvim_create_user_command('CR', function(opts)
+  local filename = opts.args
+  local current_dir = vim.fn.expand('%:p:h')
+  local full_path = current_dir .. '/' .. filename
+
+  -- Create parent directories if needed
+  vim.fn.mkdir(vim.fn.fnamemodify(full_path, ':h'), 'p')
+
+  -- Open the file
+  vim.cmd('edit ' .. full_path)
+end, { nargs = 1, complete = 'file' })
