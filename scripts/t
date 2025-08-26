@@ -1,0 +1,218 @@
+#!/usr/bin/env -S uv run --script
+
+# /// script
+# dependencies = [
+#   "pydantic"
+# ]
+# ///
+
+from argparse import ArgumentParser
+from pathlib import Path
+from pydantic import BaseModel, Field
+from enum import IntEnum, auto
+from typing import Optional
+import json
+from contextlib import contextmanager
+
+TIMEFRAME_OPTIONS = ["d", "w", "m", "q", "y", "5y"]
+
+
+class Timeframe(IntEnum):
+    day = 0
+    week = auto()
+    month = auto()
+    quarter = auto()
+    year = auto()
+    five_year = auto()
+
+    @staticmethod
+    def from_str(val: str) -> "Timeframe":
+        return Timeframe(TIMEFRAME_OPTIONS.index(val))
+
+
+class Task(BaseModel):
+    title: str
+    description: Optional[str] = None
+    project_id: Optional[str] = None
+
+
+class Project(BaseModel):
+    tasks: set[str]
+    title: str
+    description: Optional[str] = None
+    parents: set[str]
+    timeframe: Timeframe
+
+    def delete(self, root: Path):
+        (root / f"{id}.md").unlink(missing_ok=True)
+        if (root / f"{id}").is_dir():
+            (root / f"{id}").rmdir()
+
+
+class Collection(BaseModel):
+    tasks: dict[str, Task]
+    projects: dict[str, Project]
+    source_dir: Path = Field(exclude=True)
+
+    @staticmethod
+    def load(path: Path):
+        if not (path / "tasks.json").is_file():
+            return Collection(tasks={}, projects={}, source_dir=path)
+
+        with (path / "tasks.json").open("r") as f:
+            collection = Collection(**json.load(f), source_dir=path)
+            collection.validate()
+            return collection
+
+    def save(self):
+        with (self.source_dir / "tasks.json").open("w") as f:
+            f.write(self.model_dump_json(indent=4))
+
+    def validate(self):
+        for task in self.tasks:
+            assert task.project_id is None or task.project_id in self.projects
+
+        for project in self.projects.values():
+            for task in project.tasks:
+                assert task in self.tasks
+
+            for parent in project.parents:
+                assert parent in self.projects
+                assert self.projects[parent].timeframe > project.timeframe
+
+
+@contextmanager
+def collection():
+    collection = Collection.load(Path.home() / "notes/buckets")
+    yield collection
+    collection.save()
+
+
+def review(args):
+    """
+    - review timeframe
+    - for each open element say "delete", "defer", "complete"
+    - view notes of previous time frame
+    - add note
+    """
+
+    pass
+
+
+def plan(args):
+    """
+    - plan timeframe
+    - add new projects
+    - set priority
+    """
+    pass
+
+
+def show(args):
+    """
+    - view current projects as tree-view
+    """
+    with collection() as c:
+        for p in c.projects.values():
+            print(p.timeframe, p.title)
+        for t in c.tasks.values():
+            print(t.title)
+
+
+def add_project(c: Collection, id: str):
+    print("Adding project")
+    title = input("Title: ").strip()
+    description = input("Description: ").strip()
+    timeframe = Timeframe.from_str(input("Timeframe: ").strip())
+
+    assert id not in c.projects
+    c.projects[id] = Project(
+        tasks=set(),
+        title=title,
+        description=description,
+        parents=set(),
+        timeframe=timeframe
+    )
+
+    print("Added project")
+
+    for tid, t in c.tasks.items():
+        if t.project_id == id:
+            c.projects[id].tasks.add(tid)
+            print("Linked orphaned task")
+
+def add_proj(args):
+    with collection() as c:
+        try:
+            add_project(c, args.id)
+        except KeyboardInterrupt:
+            pass
+
+
+def add(args):
+    def id_from_title(title: str):
+        return title.replace(" ", "_").lower()
+
+    def add_task(c: Collection, project_id: Optional[str]):
+        print("Adding task")
+        title = input("Title: ").strip()
+        description = input("Description: ").strip()
+        id = input("id: ").strip()
+        if len(description) == 0:
+            description = None
+        if len(id) == 0:
+            id = id_from_title(title)
+
+        assert id not in c.tasks
+        c.tasks[id] = Task(title=title, description=description)
+        print("Added task")
+
+        if project_id is not None and project_id in c.projects:
+            c.projects[project_id].tasks.add(id)
+
+    with collection() as c:
+        try:
+            if args.id not in c.projects:
+                if args.id not in c.tasks:
+                    add_task(c, args.id)
+                    return
+                add_project(c, id)
+
+            add_task(c, args.id)
+        except KeyboardInterrupt:
+            pass
+
+
+def create_parsers() -> ArgumentParser:
+    parser = ArgumentParser("A file-based project manager")
+    subparsers = parser.add_subparsers()
+
+    add_parser = subparsers.add_parser("add")
+    add_parser.add_argument("id", help="The project id")
+    add_parser.set_defaults(func=add)
+
+    add_parser = subparsers.add_parser("add-proj")
+    add_parser.add_argument("id", help="The project id")
+    add_parser.set_defaults(func=add_proj)
+
+    show_parser = subparsers.add_parser("show")
+    show_parser.add_argument("id", help="The project id", nargs="?")
+    show_parser.set_defaults(func=show)
+
+    return parser
+
+
+def main():
+    args = create_parsers().parse_args()
+
+    func = None
+    try:
+        func = args.func
+    except AttributeError:
+        create_parsers().print_usage()
+        exit(1)
+    func(args)
+
+
+if __name__ == '__main__':
+    main()
