@@ -13,8 +13,20 @@ from enum import IntEnum, auto
 from typing import Optional
 import json
 from contextlib import contextmanager
+import subprocess
+import uuid
 
 TIMEFRAME_OPTIONS = ["d", "w", "m", "q", "y", "5y"]
+
+
+def pick(options: list[str]) -> Optional[str]:
+    res = subprocess.run("fzf", input="\n".join(options), stdout=subprocess.PIPE, text=True)
+    try:
+        res.check_returncode()
+    except Exception:
+        return None
+
+    return res.stdout.strip()
 
 
 class Timeframe(IntEnum):
@@ -34,6 +46,7 @@ class Task(BaseModel):
     title: str
     description: Optional[str] = None
     project_id: Optional[str] = None
+    timeframe: Optional[Timeframe] = None
 
 
 class Project(BaseModel):
@@ -69,12 +82,13 @@ class Collection(BaseModel):
             f.write(self.model_dump_json(indent=4))
 
     def validate(self):
-        for task in self.tasks:
+        for task in self.tasks.values():
             assert task.project_id is None or task.project_id in self.projects
 
         for project in self.projects.values():
             for task in project.tasks:
                 assert task in self.tasks
+                assert self.tasks[task].timeframe is None or self.tasks[task].timeframe <= project.timeframe
 
             for parent in project.parents:
                 assert parent in self.projects
@@ -113,8 +127,8 @@ def show(args):
     - view current projects as tree-view
     """
     with collection() as c:
-        for p in c.projects.values():
-            print(p.timeframe, p.title)
+        for pid, p in c.projects.items():
+            print(p.timeframe, f"{pid}: {p.title}")
         for t in c.tasks.values():
             print(t.title)
 
@@ -124,6 +138,20 @@ def add_project(c: Collection, id: str):
     title = input("Title: ").strip()
     description = input("Description: ").strip()
     timeframe = Timeframe.from_str(input("Timeframe: ").strip())
+    parent = None
+    possible_parents = [pid for pid, p in c.projects.items() if p.timeframe > timeframe]
+    if len(possible_parents) > 0:
+        possible_parents.append("<create new>")
+        use_parent = input("Set Parent? [Y/n]:").strip().lower()
+        if len(use_parent) == 0 or use_parent == "y":
+            parent = pick(possible_parents)
+        else:
+            assert use_parent == "n"
+
+        if parent == "<create new>":
+            new_id = input("Parent id: ").strip()
+            add_project(c, new_id)
+            parent = new_id
 
     assert id not in c.projects
     c.projects[id] = Project(
@@ -150,45 +178,32 @@ def add_proj(args):
 
 
 def add(args):
-    def id_from_title(title: str):
-        return title.replace(" ", "_").lower()
-
-    def add_task(c: Collection, project_id: Optional[str]):
-        print("Adding task")
-        title = input("Title: ").strip()
-        description = input("Description: ").strip()
-        id = input("id: ").strip()
-        if len(description) == 0:
-            description = None
-        if len(id) == 0:
-            id = id_from_title(title)
-
-        assert id not in c.tasks
-        c.tasks[id] = Task(title=title, description=description)
-        print("Added task")
-
-        if project_id is not None and project_id in c.projects:
-            c.projects[project_id].tasks.add(id)
-
     with collection() as c:
-        try:
-            if args.id not in c.projects:
-                if args.id not in c.tasks:
-                    add_task(c, args.id)
-                    return
-                add_project(c, id)
+        id = str(uuid.uuid4())
+        while id in c.tasks:
+            id = str(uuid.uuid4())
 
-            add_task(c, args.id)
-        except KeyboardInterrupt:
-            pass
+        if args.parent is not None:
+            assert args.parent in c.projects
+            c.projects[args.parent].tasks.add(id)
+
+        timeframe = None if args.timeframe is None else Timeframe.from_str(args.timeframe)
+
+        c.tasks[id] = Task(title=args.title, 
+                           description=args.description, 
+                           project_id=args.parent,
+                           timeframe=timeframe)
 
 
 def create_parsers() -> ArgumentParser:
     parser = ArgumentParser("A file-based project manager")
     subparsers = parser.add_subparsers()
 
-    add_parser = subparsers.add_parser("add")
-    add_parser.add_argument("id", help="The project id")
+    add_parser = subparsers.add_parser("add", help="Create a new task")
+    add_parser.add_argument("title", help="The task title")
+    add_parser.add_argument("-d", "--description", help="The task description")
+    add_parser.add_argument("-p", "--parent", help="The project for this task")
+    add_parser.add_argument("-t", "--timeframe", help="The timeframe for this task")
     add_parser.set_defaults(func=add)
 
     add_parser = subparsers.add_parser("add-proj")
