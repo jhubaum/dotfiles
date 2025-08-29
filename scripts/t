@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from pydantic import BaseModel, Field
 from enum import IntEnum, auto
-from typing import Optional
+from typing import Optional, Protocol
 import json
 from contextlib import contextmanager
 import subprocess
@@ -41,6 +41,8 @@ class Window:
         self.screen.keypad(1)
 
         curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
+        curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+        curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
 
     def reset(self):
         if self.screen is None:
@@ -104,6 +106,18 @@ class PriorityTable(BaseModel):
     c2: Optional[str] = None
 
 
+    def set_a(self, id: str):
+        self.a = id
+
+    def set_b(self, id: str):
+        self.b2 = self.b1
+        self.b1 = id
+
+    def set_c(self, id: str):
+        self.c2 = self.c1
+        self.c1 = id
+
+
 class Task(BaseModel):
     title: str
     description: Optional[str] = None
@@ -140,6 +154,24 @@ class Collection(BaseModel):
     daily_prios: PriorityTable
 
     current_timeframe: Timeframe = Timeframe.five_year
+
+    def current_prios(self):
+        if self.current_timeframe == Timeframe.five_year:
+            return self.five_year_prios
+
+        if self.current_timeframe == Timeframe.year:
+            return self.yearly_prios
+
+        if self.current_timeframe == Timeframe.quarter:
+            return self.quarterly_prios
+
+        if self.current_timeframe == Timeframe.month:
+            return self.monthly_prios
+
+        if self.current_timeframe == Timeframe.week:
+            return self.weekly_prios
+
+        assert False
 
     def is_prio_a(self, pid: str):
         p = self.projects[pid]
@@ -292,7 +324,7 @@ def show(args):
             return -1
 
         sorted_task_ids = sorted(c.tasks, key=sorted_task_index)
-        sorted_empty_projects = sorted([pid for pid, p in c.projects.items() if len(p.tasks) == 0], key=lambda pid: c.projects[pid].timeframe)
+        sorted_empty_projects = sorted(c.projects, key=lambda pid: c.projects[pid].timeframe)
         print("--- Tasks --- ")
         for tid in sorted_task_ids:
             print_task(c, tid)
@@ -457,33 +489,142 @@ class ProjectPreviewTable:
         for x, col in enumerate(self.columns):
             max_width = 0
             for y, elem in enumerate(col):
+                attr = 0
                 if x == self.selected_x and y == self.selected_y:
-                    w.screen.attron(curses.color_pair(1))
-
-                w.screen.addstr(y, start, elem)
-                if x == self.selected_x and y == self.selected_y:
-                    w.screen.attroff(curses.color_pair(1))
+                    attr = curses.A_REVERSE
+                w.screen.addstr(y, start, elem, attr)
                 max_width = max(max_width, len(elem))
             start += max_width + 1
 
 
+class WindowMode(Protocol):
+    def render_main_window(self, w: Window, c: Collection):
+        pass
+
+    def handle_input(self, ch: str, c: Collection) -> Optional["WindowMode"]:
+        pass
+
+    def available_commands(self, c: Collection):
+        yield from ()
+
+
+class PlanningMode(WindowMode):
+    def __init__(self, c: Collection):
+        self.index = 0
+        self.project_ids = [
+            pid for pid, p in c.projects.items() if p.timeframe == c.current_timeframe
+        ]
+        self.selecting_priority = False
+
+    def render_main_window(self, w: Window, c: Collection):
+        for i, pid in enumerate(self.project_ids):
+            attr = 0
+            if c.is_prio_a(pid):
+                attr = curses.color_pair(1)
+            elif c.is_prio_b(pid):
+                attr = curses.color_pair(2)
+            elif c.is_prio_c(pid):
+                attr = curses.color_pair(3)
+
+            if i == self.index:
+                attr = attr | curses.A_REVERSE
+            w.screen.addstr(i, 0, f"{pid}: {c.projects[pid].title}", attr)
+
+    def handle_input(self, ch: str, c: Collection) -> Optional[WindowMode]:
+        if self.selecting_priority:
+            if ch.lower() == "a":
+                c.current_prios().set_a(self.project_ids[self.index])
+
+            if ch.lower() == "b":
+                c.current_prios().set_b(self.project_ids[self.index])
+
+            if ch.lower() == "c":
+                c.current_prios().set_c(self.project_ids[self.index])
+
+            self.selecting_priority = False
+            return None
+
+        if ch.lower() == "p":
+            self.selecting_priority = True
+            return None
+
+        if ch == "KEY_UP" or ch.lower() == "k":
+            self.index -= 1
+
+        if ch == "KEY_DOWN" or ch.lower() == "j":
+            self.index += 1
+
+        if self.index < 0:
+            self.index = 0
+        if self.index >= len(self.project_ids):
+            self.index = len(self.project_ids) - 1
+
+    def available_commands(self, c: Collection):
+        if self.selecting_priority:
+            yield "a", "A"
+            yield "b", "B"
+            yield "c", "C"
+            return
+
+        yield "c", "Create new project"
+        yield "d", "Delete project"
+        yield "p", "Set priority"
+
+
+class MainWindow(WindowMode):
+    def __init__(self, c: Collection):
+        self.table = ProjectPreviewTable.from_collection(c)
+
+    def render_main_window(self, w: Window, c: Collection):
+        self.table.render(w)
+
+    def handle_input(self, ch: str, c: Collection) -> Optional[WindowMode]:
+        if ch.lower() == "r":
+            pass
+        elif ch.lower() == "p":
+            return PlanningMode(c)
+
+        if ch == "KEY_RIGHT" or ch.lower() == "l":
+            self.table.selected_x += 1
+
+        if ch == "KEY_LEFT" or ch.lower() == "h":
+            self.table.selected_x -= 1
+
+        if ch == "KEY_UP" or ch.lower() == "k":
+            self.table.selected_y -= 1
+
+        if ch == "KEY_DOWN" or ch.lower() == "j":
+            self.table.selected_y += 1
+
+        self.table.selected_x = (self.table.selected_x + self.table.width()) % self.table.width()
+        if self.table.selected_x == 0:
+            self.table.selected_x = 1
+        self.table.selected_y = (self.table.selected_y + self.table.height()) % self.table.height()
+
+        return None
+
+    def available_commands(self, c):
+        if c.current_timeframe != Timeframe.five_year:
+            yield "r", f"Review {c.current_timeframe.to_s()}"
+
+        if c.current_timeframe != Timeframe.day:
+            yield "p", f"Plan {c.current_timeframe.to_s()}"
+
+
 def win_main(w: Window, c: Collection):
-    running = True
-    
-    table = ProjectPreviewTable.from_collection(c)
-    while running:
+    state = MainWindow(c)
+
+    while True:
         w.screen.clear()
-        table.render(w)
+        state.render_main_window(w, c)
 
         commands = { 
             "q": "Quit",
         }
 
-        if c.current_timeframe != Timeframe.five_year:
-            commands["r"] = f"Review {c.current_timeframe.to_s()}"
-
-        if c.current_timeframe != Timeframe.day:
-            commands["p"] = f"Plan {c.current_timeframe.to_s()}"
+        for cmd, name in state.available_commands(c):
+            assert cmd not in commands
+            commands[cmd] = name
 
         command_bar_str = ""
         for key, name in commands.items():
@@ -494,29 +635,12 @@ def win_main(w: Window, c: Collection):
         w.screen.refresh()
 
         ch = w.screen.getkey()
-
         if ch.lower() == "q":
-            running = False
             break
-        else:
-            assert ch.lower() not in commands
 
-        if ch == "KEY_RIGHT" or ch.lower() == "l":
-            table.selected_x += 1
-
-        if ch == "KEY_LEFT" or ch.lower() == "h":
-            table.selected_x -= 1
-
-        if ch == "KEY_UP" or ch.lower() == "k":
-            table.selected_y -= 1
-
-        if ch == "KEY_DOWN" or ch.lower() == "j":
-            table.selected_y += 1
-
-        table.selected_x = (table.selected_x + table.width()) % table.width()
-        if table.selected_x == 0:
-            table.selected_x = 1
-        table.selected_y = (table.selected_y + table.height()) % table.height()
+        new_state = state.handle_input(ch, c)
+        if new_state is not None:
+            state = new_state
 
 
 def main():
