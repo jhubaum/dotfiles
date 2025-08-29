@@ -16,7 +16,57 @@ import json
 from contextlib import contextmanager
 import subprocess
 import uuid
+import curses
+from dataclasses import dataclass, field as DCField
+from collections import defaultdict
 
+from rich import print
+
+class Window:
+    def __init__(self):
+        self.screen = None
+
+    def initialize(self):
+        self.screen = curses.initscr()
+
+        curses.noecho()
+        curses.cbreak()
+
+        try:
+            curses.start_color()
+            curses.use_default_colors()
+        except:
+            pass
+
+        self.screen.keypad(1)
+
+        curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
+
+    def reset(self):
+        if self.screen is None:
+            return
+
+        self.screen.keypad(0)
+        curses.echo()
+        curses.nocbreak()
+        curses.endwin()
+        self.screen = None
+
+    def run_terminal_app(self, *args: str, input: Optional[str]=None):
+        self.reset()
+        res = subprocess.run(*args, input=input, text=True, stdout=subprocess.PIPE)
+        self.initialize()
+        return res
+
+
+@contextmanager
+def window_manager():
+    window = Window()
+    window.initialize()
+    try:
+        yield window
+    finally:
+        window.reset()
 
 
 def pick(options: list[str]) -> Optional[str]:
@@ -286,6 +336,121 @@ def create_parsers() -> ArgumentParser:
     return parser
 
 
+@dataclass
+class ProjectPreviewTable:
+    columns: list[list[Optional[str]]] = DCField(default_factory=list)
+    selected_x: int = 1
+    selected_y: int = 0
+
+    @staticmethod
+    def from_collection(c: Collection):
+        @dataclass
+        class ProjectsRow:
+            prio_a: Optional[str] = None
+            prio_bs: list[str] = DCField(default_factory=list)
+            prio_cs: list[str] = DCField(default_factory=list)
+            other: list[str] = DCField(default_factory=list)
+
+            def insert(self, pid: str, c: Collection):
+                if pid == c.proj_prio_a:
+                    self.prio_a = pid
+                elif pid == c.proj_prio_b1 or pid == c.proj_prio_b2:
+                    self.prio_bs.append(pid)
+                elif pid == c.proj_prio_c1 or pid == c.proj_prio_c2:
+                    self.prio_cs.append(pid)
+                else:
+                    self.other.append(pid)
+
+            def __iter__(self):
+                if self.prio_a is not None:
+                    yield self.prio_a
+
+                yield from self.prio_bs
+                yield from self.prio_cs
+                yield from self.other
+
+
+        rows = defaultdict(ProjectsRow)
+
+        for pid, p in c.projects.items():
+            rows[p.timeframe].insert(pid, c)
+
+        def project_titles(timeframe):
+            return [c.projects[pid].title for pid in rows[timeframe]]
+
+        rows = [
+            ["Next Five Years: "] + project_titles(Timeframe.five_year),
+            ["This Year:"] + project_titles(Timeframe.year),
+            ["This Quarter:"] + project_titles(Timeframe.quarter),
+            ["This Month:"] + project_titles(Timeframe.month),
+            ["This Week:"] + project_titles(Timeframe.week),
+            ["Today:"] + project_titles(Timeframe.day),
+        ]
+
+        columns = []
+        for row in rows:
+            while len(columns) < len(row):
+                columns.append([])
+            for i, elem in enumerate(row):
+                columns[i].append(elem)
+        return ProjectPreviewTable(columns)
+
+    def width(self):
+        return 0 if len(self.columns) == 0 else len(self.columns[0])
+
+    def height(self):
+        return len(self.columns)
+
+    def render(self, w):
+        start = 0
+        for x, col in enumerate(self.columns):
+            max_width = 0
+            for y, elem in enumerate(col):
+                if x == self.selected_x and y == self.selected_y:
+                    w.screen.attron(curses.color_pair(1))
+
+                w.screen.addstr(y, start, elem)
+                if x == self.selected_x and y == self.selected_y:
+                    w.screen.attroff(curses.color_pair(1))
+                max_width = max(max_width, len(elem))
+            start += max_width + 1
+
+
+def win_main(w: Window, c: Collection):
+    running = True
+    table = ProjectPreviewTable.from_collection(c)
+    while running:
+        w.screen.clear()
+        table.render(w)
+
+        command_bar_str = "(q) Quit"
+
+        w.screen.subwin(curses.LINES-3, 0).box()
+        w.screen.addstr(curses.LINES-2, 1, command_bar_str)
+        w.screen.refresh()
+
+        ch = w.screen.getkey()
+        if ch.lower() == "q":
+            running = False
+            break
+        if ch == "KEY_RIGHT" or ch.lower() == "l":
+            table.selected_x += 1
+
+        if ch == "KEY_LEFT" or ch.lower() == "h":
+            table.selected_x -= 1
+
+        if ch == "KEY_UP" or ch.lower() == "k":
+            table.selected_y -= 1
+
+        if ch == "KEY_DOWN" or ch.lower() == "j":
+            table.selected_y += 1
+
+        table.selected_x = (table.selected_x + table.width()) % table.width()
+        if table.selected_x == 0:
+            table.selected_x = 1
+        table.selected_y = (table.selected_y + table.height()) % table.height()
+
+
 def main():
     args = create_parsers().parse_args()
 
@@ -293,10 +458,11 @@ def main():
     try:
         func = args.func
     except AttributeError:
-        create_parsers().print_usage()
-        exit(1)
+        with window_manager() as w:
+            with collection() as c:
+                win_main(w, c)
+        return
     func(args)
-
 
 if __name__ == '__main__':
     main()
