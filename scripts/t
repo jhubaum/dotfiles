@@ -2,7 +2,8 @@
 
 # /// script
 # dependencies = [
-#   "pydantic"
+#   "pydantic",
+#   "rich"
 # ]
 # ///
 
@@ -16,7 +17,6 @@ from contextlib import contextmanager
 import subprocess
 import uuid
 
-TIMEFRAME_OPTIONS = ["d", "w", "m", "q", "y", "5y"]
 
 
 def pick(options: list[str]) -> Optional[str]:
@@ -29,6 +29,8 @@ def pick(options: list[str]) -> Optional[str]:
     return res.stdout.strip()
 
 
+TIMEFRAME_OPTIONS = ["d", "w", "m", "q", "y", "5y"]
+
 class Timeframe(IntEnum):
     day = 0
     week = auto()
@@ -40,6 +42,9 @@ class Timeframe(IntEnum):
     @staticmethod
     def from_str(val: str) -> "Timeframe":
         return Timeframe(TIMEFRAME_OPTIONS.index(val))
+
+    def to_s(self):
+        return TIMEFRAME_OPTIONS[self.value]
 
 
 class Task(BaseModel):
@@ -66,6 +71,18 @@ class Collection(BaseModel):
     tasks: dict[str, Task]
     projects: dict[str, Project]
     source_dir: Path = Field(exclude=True)
+
+    task_prio_a: Optional[str] = None
+    task_prio_b1: Optional[str] = None
+    task_prio_b2: Optional[str] = None
+    task_prio_c1: Optional[str] = None
+    task_prio_c2: Optional[str] = None
+
+    proj_prio_a: Optional[str] = None
+    proj_prio_b1: Optional[str] = None
+    proj_prio_b2: Optional[str] = None
+    proj_prio_c1: Optional[str] = None
+    proj_prio_c2: Optional[str] = None
 
     @staticmethod
     def load(path: Path):
@@ -126,11 +143,63 @@ def show(args):
     """
     - view current projects as tree-view
     """
+
+    def print_task(c: Collection, tid: str):
+        t = c.tasks[tid]
+        timeframe = None
+        if t.timeframe is not None:
+            timeframe = t.timeframe.to_s()
+        elif t.project_id is not None:
+            timeframe = c.projects[t.project_id].timeframe.to_s()
+
+        pid = t.project_id or "orphaned"
+        if timeframe is not None:
+            timeframe = ":" + timeframe
+
+        color = "bright_black"
+        if tid == c.task_prio_a:
+            color = "red"
+        elif tid == c.task_prio_b1 or tid == c.task_prio_b2:
+            color = "yellow"
+        elif tid == c.task_prio_c1 or tid == c.task_prio_c2:
+            color = "green"
+
+        print(f"[{color}]\[{pid}{timeframe or ''}] {t.title}[/{color}]")
+
+    def print_project(c: Collection, pid: str):
+        color = "bright_black"
+        if pid == c.proj_prio_a:
+            color = "red"
+        elif pid == c.proj_prio_b1 or pid == c.proj_prio_b2:
+            color = "yellow"
+        elif pid == c.proj_prio_c1 or pid == c.proj_prio_c2:
+            color = "green"
+
+        p = c.projects[pid]
+        print(f"[{color}]\[{pid}:{p.timeframe.to_s()}] {p.title}[/{color}]")
+
     with collection() as c:
-        for pid, p in c.projects.items():
-            print(p.timeframe, f"{pid}: {p.title}")
-        for t in c.tasks.values():
-            print(t.title)
+        def sorted_task_index(tid: str):
+            assert tid in c.tasks
+            t = c.tasks[tid]
+            if t.timeframe is not None:
+                return t.timeframe
+
+            if t.project_id is not None:
+                return c.projects[t.project_id].timeframe
+
+            return -1
+
+        sorted_task_ids = sorted(c.tasks, key=sorted_task_index)
+        sorted_empty_projects = sorted([pid for pid, p in c.projects.items() if len(p.tasks) == 0], key=lambda pid: c.projects[pid].timeframe)
+        print("--- Tasks --- ")
+        for tid in sorted_task_ids:
+            print_task(c, tid)
+
+        print()
+        print("--- Projects --- ")
+        for pid in sorted_empty_projects:
+            print_project(c, pid)
 
 
 def add_project(c: Collection, id: str):
