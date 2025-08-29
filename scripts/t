@@ -96,6 +96,13 @@ class Timeframe(IntEnum):
     def to_s(self):
         return TIMEFRAME_OPTIONS[self.value]
 
+class PriorityTable(BaseModel):
+    a: Optional[str] = None
+    b1: Optional[str] = None
+    b2: Optional[str] = None
+    c1: Optional[str] = None
+    c2: Optional[str] = None
+
 
 class Task(BaseModel):
     title: str
@@ -107,9 +114,9 @@ class Task(BaseModel):
 class Project(BaseModel):
     tasks: set[str]
     title: str
-    description: Optional[str] = None
     parents: set[str]
     timeframe: Timeframe
+    description: Optional[str] = None
 
     def delete(self, root: Path):
         (root / f"{id}.md").unlink(missing_ok=True)
@@ -122,17 +129,59 @@ class Collection(BaseModel):
     projects: dict[str, Project]
     source_dir: Path = Field(exclude=True)
 
-    task_prio_a: Optional[str] = None
-    task_prio_b1: Optional[str] = None
-    task_prio_b2: Optional[str] = None
-    task_prio_c1: Optional[str] = None
-    task_prio_c2: Optional[str] = None
+    # Acting on projects
+    five_year_prios: PriorityTable
+    yearly_prios: PriorityTable
+    quarterly_prios: PriorityTable
+    monthly_prios: PriorityTable
+    weekly_prios: PriorityTable
 
-    proj_prio_a: Optional[str] = None
-    proj_prio_b1: Optional[str] = None
-    proj_prio_b2: Optional[str] = None
-    proj_prio_c1: Optional[str] = None
-    proj_prio_c2: Optional[str] = None
+    # Acting on tasks
+    daily_prios: PriorityTable
+
+    def is_prio_a(self, pid: str):
+        p = self.projects[pid]
+        assert p.timeframe != Timeframe.day
+        for tbl in [
+            self.five_year_prios,
+            self.yearly_prios,
+            self.quarterly_prios,
+            self.monthly_prios,
+            self.weekly_prios
+        ]:
+            if tbl.a == pid:
+                return True
+        return False
+
+    def is_prio_b(self, pid: str):
+        p = self.projects[pid]
+        assert p.timeframe != Timeframe.day
+        for tbl in [
+            self.five_year_prios,
+            self.yearly_prios,
+            self.quarterly_prios,
+            self.monthly_prios,
+            self.weekly_prios
+        ]:
+            if tbl.b1 == pid or tbl.b2 == pid:
+                return True
+        return False
+
+
+    def is_prio_c(self, pid: str):
+        p = self.projects[pid]
+        assert p.timeframe != Timeframe.day
+        for tbl in [
+            self.five_year_prios,
+            self.yearly_prios,
+            self.quarterly_prios,
+            self.monthly_prios,
+            self.weekly_prios
+        ]:
+            if tbl.c1 == pid or tbl.c2 == pid:
+                return True
+        return False
+
 
     @staticmethod
     def load(path: Path):
@@ -207,22 +256,22 @@ def show(args):
             timeframe = ":" + timeframe
 
         color = "bright_black"
-        if tid == c.task_prio_a:
+        if tid == c.daily_prios.a:
             color = "red"
-        elif tid == c.task_prio_b1 or tid == c.task_prio_b2:
+        elif tid == c.daily_prios.b1 or tid == c.daily_prios.b2:
             color = "yellow"
-        elif tid == c.task_prio_c1 or tid == c.task_prio_c2:
+        elif tid == c.daily_prios.c1 or tid == c.daily_prios.c2:
             color = "green"
 
         print(f"[{color}]\[{pid}{timeframe or ''}] {t.title}[/{color}]")
 
     def print_project(c: Collection, pid: str):
         color = "bright_black"
-        if pid == c.proj_prio_a:
+        if c.is_prio_a(pid):
             color = "red"
-        elif pid == c.proj_prio_b1 or pid == c.proj_prio_b2:
+        elif c.is_prio_b(pid):
             color = "yellow"
-        elif pid == c.proj_prio_c1 or pid == c.proj_prio_c2:
+        elif c.is_prio_c(pid):
             color = "green"
 
         p = c.projects[pid]
@@ -352,11 +401,11 @@ class ProjectPreviewTable:
             other: list[str] = DCField(default_factory=list)
 
             def insert(self, pid: str, c: Collection):
-                if pid == c.proj_prio_a:
+                if c.is_prio_a(pid):
                     self.prio_a = pid
-                elif pid == c.proj_prio_b1 or pid == c.proj_prio_b2:
+                elif c.is_prio_b(pid):
                     self.prio_bs.append(pid)
-                elif pid == c.proj_prio_c1 or pid == c.proj_prio_c2:
+                elif c.is_prio_c(pid):
                     self.prio_cs.append(pid)
                 else:
                     self.other.append(pid)
