@@ -139,6 +139,8 @@ class Collection(BaseModel):
     # Acting on tasks
     daily_prios: PriorityTable
 
+    current_timeframe: Timeframe = Timeframe.five_year
+
     def is_prio_a(self, pid: str):
         p = self.projects[pid]
         assert p.timeframe != Timeframe.day
@@ -467,21 +469,38 @@ class ProjectPreviewTable:
 
 def win_main(w: Window, c: Collection):
     running = True
+    
     table = ProjectPreviewTable.from_collection(c)
     while running:
         w.screen.clear()
         table.render(w)
 
-        command_bar_str = "(q) Quit"
+        commands = { 
+            "q": "Quit",
+        }
+
+        if c.current_timeframe != Timeframe.five_year:
+            commands["r"] = f"Review {c.current_timeframe.to_s()}"
+
+        if c.current_timeframe != Timeframe.day:
+            commands["p"] = f"Plan {c.current_timeframe.to_s()}"
+
+        command_bar_str = ""
+        for key, name in commands.items():
+            command_bar_str += f"({key}) {name}  "
 
         w.screen.subwin(curses.LINES-3, 0).box()
         w.screen.addstr(curses.LINES-2, 1, command_bar_str)
         w.screen.refresh()
 
         ch = w.screen.getkey()
+
         if ch.lower() == "q":
             running = False
             break
+        else:
+            assert ch.lower() not in commands
+
         if ch == "KEY_RIGHT" or ch.lower() == "l":
             table.selected_x += 1
 
