@@ -496,6 +496,43 @@ class ProjectPreviewTable:
                 max_width = max(max_width, len(elem))
             start += max_width + 1
 
+def render_project_preview(w: Window, c: Collection, pid: str):
+    width = curses.COLS // 2
+    scr = w.screen.subwin(curses.LINES-3, width, 0, curses.COLS - width)
+    scr.box()
+
+    p = c.projects[pid]
+    h = 1
+
+    def add_str(string, attr=0):
+        nonlocal h
+        scr.addstr(h, 1, string, attr);
+        h += 1
+
+    add_str(p.title, curses.A_BOLD)
+    if p.description is not None and len(p.description) > 0:
+        h += 1
+        add_str(p.description)
+
+    child_projects = set()
+    for cid, child in c.projects.items():
+        # TODO: Do this recursively to detect all child projects
+        if pid in child.parents:
+            child_projects.add(cid)
+
+    if len(child_projects) > 0:
+        h += 1
+        add_str("Projects")
+        for cid in child_projects:
+            child = c.projects[cid]
+            add_str(f"- [{cid}:{child.timeframe.to_s()}] {child.title}")
+
+    if len(p.tasks) > 0:
+        h += 1
+        add_str("Tasks")
+        for tid in p.tasks:
+            add_str(f"- [ ] {c.tasks[tid].title}")
+
 
 class WindowMode(Protocol):
     def render_main_window(self, w: Window, c: Collection):
@@ -529,6 +566,7 @@ class PlanningMode(WindowMode):
             if i == self.index:
                 attr = attr | curses.A_REVERSE
             w.screen.addstr(i, 0, f"{pid}: {c.projects[pid].title}", attr)
+        render_project_preview(w, c, self.project_ids[self.index])
 
     def handle_input(self, ch: str, c: Collection) -> Optional[WindowMode]:
         if self.selecting_priority:
@@ -577,6 +615,8 @@ class MainWindow(WindowMode):
 
     def render_main_window(self, w: Window, c: Collection):
         self.table.render(w)
+        # TODO: rewrite table to support project preview
+        # render_project_preview(w, c, self.project_ids[self.index])
 
     def handle_input(self, ch: str, c: Collection) -> Optional[WindowMode]:
         if ch.lower() == "r":
