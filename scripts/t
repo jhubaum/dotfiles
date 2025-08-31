@@ -107,15 +107,36 @@ class PriorityTable(BaseModel):
 
 
     def set_a(self, id: str):
+        self.reset(id)
         self.a = id
 
     def set_b(self, id: str):
+        self.reset(id)
         self.b2 = self.b1
         self.b1 = id
 
     def set_c(self, id: str):
+        self.reset(id)
         self.c2 = self.c1
         self.c1 = id
+
+    def reset(self, id: str):
+        if self.a == id:
+            self.a = None
+
+        if self.b1 == id:
+            self.b1 = self.b2
+            self.b2 = None
+
+        if self.b2 == id:
+            self.b2 = None
+
+        if self.c1 == id:
+            self.c1 = self.c2
+            self.c2 = None
+
+        if self.c2 == id:
+            self.c2 = None
 
 
 class Task(BaseModel):
@@ -579,6 +600,9 @@ class PlanningMode(WindowMode):
             if ch.lower() == "c":
                 c.current_prios().set_c(self.project_ids[self.index])
 
+            if ch.lower() == "r":
+                c.current_prios().reset(self.project_ids[self.index])
+
             self.selecting_priority = False
             return None
 
@@ -602,11 +626,14 @@ class PlanningMode(WindowMode):
             yield "a", "A"
             yield "b", "B"
             yield "c", "C"
+            yield "r", "reset"
             return
 
         yield "c", "Create new project"
+        yield "e", "Edit project"
         yield "d", "Delete project"
         yield "p", "Set priority"
+        yield "f", "Finish Plan"
 
 
 class MainWindow(WindowMode):
