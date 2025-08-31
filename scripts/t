@@ -440,9 +440,27 @@ def create_parsers() -> ArgumentParser:
     return parser
 
 
+def render_rows(w: Window, rows: list[list[str]]):
+    col_widths = []
+
+    for row in rows:
+        for i, elem in enumerate(row):
+            if len(col_widths) <= i:
+                col_widths.append(len(elem))
+            else:
+                col_widths[i] = max(col_widths[i], len(elem))
+
+    for i, row in enumerate(rows):
+        start = 0
+        for j, elem in enumerate(row):
+            w.screen.addstr(i, start, elem)
+            start += col_widths[j] + 1
+
+
+
 @dataclass
 class ProjectPreviewTable:
-    columns: list[list[Optional[str]]] = DCField(default_factory=list)
+    project_id_rows: list[list[str]] 
     selected_x: int = 1
     selected_y: int = 0
 
@@ -475,47 +493,34 @@ class ProjectPreviewTable:
 
 
         rows = defaultdict(ProjectsRow)
-
         for pid, p in c.projects.items():
             rows[p.timeframe].insert(pid, c)
 
-        def project_titles(timeframe):
-            return [c.projects[pid].title for pid in rows[timeframe]]
+        return ProjectPreviewTable(project_id_rows=[ 
+            list(rows[Timeframe.five_year]),
+            list(rows[Timeframe.year]),
+            list(rows[Timeframe.quarter]),
+            list(rows[Timeframe.month]),
+            list(rows[Timeframe.week]),
+            list(rows[Timeframe.day]),
+        ])
 
-        rows = [
-            ["Next Five Years: "] + project_titles(Timeframe.five_year),
-            ["This Year:"] + project_titles(Timeframe.year),
-            ["This Quarter:"] + project_titles(Timeframe.quarter),
-            ["This Month:"] + project_titles(Timeframe.month),
-            ["This Week:"] + project_titles(Timeframe.week),
-            ["Today:"] + project_titles(Timeframe.day),
+    def render(self, w, c):
+        labels = [
+            "Next Five Years:",
+            "This Year:",
+            "This Quarter:",
+            "This Month:",
+            "This Week:",
+            "Today:"
         ]
 
-        columns = []
-        for row in rows:
-            while len(columns) < len(row):
-                columns.append([])
-            for i, elem in enumerate(row):
-                columns[i].append(elem)
-        return ProjectPreviewTable(columns)
+        rows = []
+        for i, l in enumerate(labels):
+            rows.append([l])
+            rows[-1].extend([c.projects[pid].title for pid in self.project_id_rows[i]])
+        render_rows(w, rows)
 
-    def width(self):
-        return 0 if len(self.columns) == 0 else len(self.columns[0])
-
-    def height(self):
-        return len(self.columns)
-
-    def render(self, w):
-        start = 0
-        for x, col in enumerate(self.columns):
-            max_width = 0
-            for y, elem in enumerate(col):
-                attr = 0
-                if x == self.selected_x and y == self.selected_y:
-                    attr = curses.A_REVERSE
-                w.screen.addstr(y, start, elem, attr)
-                max_width = max(max_width, len(elem))
-            start += max_width + 1
 
 def render_project_preview(w: Window, c: Collection, pid: str):
     width = curses.COLS // 2
@@ -641,7 +646,7 @@ class MainWindow(WindowMode):
         self.table = ProjectPreviewTable.from_collection(c)
 
     def render_main_window(self, w: Window, c: Collection):
-        self.table.render(w)
+        self.table.render(w, c)
         # TODO: rewrite table to support project preview
         # render_project_preview(w, c, self.project_ids[self.index])
 
