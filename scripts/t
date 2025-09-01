@@ -41,9 +41,9 @@ class Window:
 
         self.screen.keypad(1)
 
-        curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
-        curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-        curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
+        curses.init_pair(1, curses.COLOR_RED, -1)
+        curses.init_pair(2, curses.COLOR_YELLOW, -1)
+        curses.init_pair(3, curses.COLOR_GREEN, -1)
         curses.init_pair(4, 8, -1)
 
     def reset(self):
@@ -652,7 +652,7 @@ class PlanningMode(WindowMode):
             if i == self.index:
                 attr = attr | curses.A_REVERSE
             w.screen.addstr(i, 0, f"{pid}: {c.projects[pid].title}", attr)
-        render_project_preview(w, c, self.project_ids[self.index])
+        render_project_preview(w, c, self.project_ids[self.index], curses.COLS // 2)
 
     def handle_input(self, ch: str, c: Collection) -> Optional[WindowMode]:
         if self.selecting_priority:
@@ -704,12 +704,15 @@ class PlanningMode(WindowMode):
 class MainWindow(WindowMode):
     def __init__(self, c: Collection):
         self.table = ProjectPreviewTable.from_collection(c)
+        self.show_project_overview = False
 
     def render_main_window(self, w: Window, c: Collection):
-        width = curses.COLS // 2
+        width = curses.COLS
+        if self.show_project_overview:
+            width = curses.COLS // 2
         self.table.render(w, c, width)
         pid = self.table.selected()
-        if pid is not None:
+        if pid is not None and self.show_project_overview:
             render_project_preview(w, c, pid, width)
 
     def handle_input(self, ch: str, c: Collection) -> Optional[WindowMode]:
@@ -717,6 +720,9 @@ class MainWindow(WindowMode):
             pass
         elif ch.lower() == "p":
             return PlanningMode(c)
+
+        if ch == "\t":
+            self.show_project_overview = not self.show_project_overview
 
         if ch == "KEY_RIGHT" or ch.lower() == "l":
             self.table.selected_x += 1
@@ -736,6 +742,7 @@ class MainWindow(WindowMode):
         return None
 
     def available_commands(self, c):
+        yield "\t", "Toggle project preview"
         if c.current_timeframe != Timeframe.five_year:
             yield "r", f"Review {c.current_timeframe.to_s()}"
 
@@ -745,6 +752,8 @@ class MainWindow(WindowMode):
 
 def win_main(w: Window, c: Collection):
     state = MainWindow(c)
+
+    SPECIAL_KEYS = { "\t": "TAB" }
 
     while True:
         w.screen.clear()
@@ -760,13 +769,19 @@ def win_main(w: Window, c: Collection):
 
         command_bar_str = ""
         for key, name in commands.items():
-            command_bar_str += f"({key}) {name}  "
+            if key in SPECIAL_KEYS:
+                key = f"<{SPECIAL_KEYS[key]}>"
+            else:
+                key = f"({key})"
+            command_bar_str += f"{key} {name}  "
 
         w.screen.subwin(curses.LINES-3, 0).box()
         w.screen.addstr(curses.LINES-2, 1, command_bar_str)
         w.screen.refresh()
 
         ch = w.screen.getkey()
+
+        w.screen.refresh()
         if ch.lower() == "q":
             break
 
