@@ -19,6 +19,7 @@ import uuid
 import curses
 from dataclasses import dataclass, field as DCField
 from collections import defaultdict
+import sys
 
 from rich import print
 
@@ -444,7 +445,11 @@ class RenderElement:
     content: str
     attr: int = 0
 
-def render_rows(w: Window, rows: list[list[RenderElement]], width: int):
+def render_rows(w: Window, index: int, labels: list[str], rows: list[list[RenderElement]], width: int):
+    assert len(labels) == len(rows)
+
+    label_length = max(len(label) for label in labels)
+
     col_widths = []
 
     for row in rows:
@@ -454,19 +459,33 @@ def render_rows(w: Window, rows: list[list[RenderElement]], width: int):
             else:
                 col_widths[i] = max(col_widths[i], len(elem.content))
 
+    minimal_width = col_widths[index] + label_length + 1
+    while index > 0 and minimal_width + col_widths[index-1] + 1 < width:
+        index -= 1
+        minimal_width += col_widths[index] + 1
+
+
     for i, row in enumerate(rows):
-        start = 0
-        for j, elem in enumerate(row):
+        w.screen.addstr(i, 0, labels[i])
+        start = label_length + 1
+
+        if index != 0:
+            w.screen.addstr(i, start, "... ")
+            start += 4
+
+        for j, elem in enumerate(row[index:]):
             remaining_space = width - start
 
             if remaining_space < 3:
+                if remaining_space > 0:
+                    w.screen.addstr(i, start, "." * remaining_space)
                 break
 
             if remaining_space < len(elem.content):
                 elem.content = elem.content[0:remaining_space-3] + "..."
 
             w.screen.addstr(i, start, elem.content, elem.attr)
-            start += col_widths[j] + 1
+            start += col_widths[j+index] + 1
 
 
 @dataclass
@@ -528,14 +547,15 @@ class ProjectPreviewTable:
 
         rows = []
         for i, l in enumerate(labels):
-            rows.append([RenderElement(content=l)])
+            row = []
             selected_x = min(self.selected_x, len(self.project_id_rows[i])-1)
             for j, pid in enumerate(self.project_id_rows[i]):
                 attr = 0
                 if self.selected_y == i and selected_x == j:
                     attr = curses.A_REVERSE
-                rows[-1].append(RenderElement(content=c.projects[pid].title, attr=attr))
-        render_rows(w, rows, width)
+                row.append(RenderElement(content=c.projects[pid].title, attr=attr))
+            rows.append(row)
+        render_rows(w, self.selected_x, labels, rows, width)
 
     def width(self):
         return max(len(row) for row in self.project_id_rows)
@@ -698,7 +718,7 @@ class MainWindow(WindowMode):
             self.table.selected_y += 1
 
         self.table.selected_y = max(0, min(self.table.selected_y, self.table.height()))
-        self.table.selected_x = max(0, min(self.table.selected_x, self.table.width()))
+        self.table.selected_x = max(0, min(self.table.selected_x, len(self.table.project_id_rows[self.table.selected_y])))
 
         return None
 
