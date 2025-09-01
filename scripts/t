@@ -23,6 +23,13 @@ import sys
 
 from rich import print
 
+CONTEXT = {
+    "private": Path.home() / "notes/buckets",
+    "work": Path.home() / "gtd"
+}
+
+METADATA_FILE = Path.home() / ".taskstate.json"
+
 class Window:
     def __init__(self):
         self.screen = None
@@ -164,17 +171,17 @@ class Project(BaseModel):
 class Collection(BaseModel):
     tasks: dict[str, Task]
     projects: dict[str, Project]
-    source_dir: Path = Field(exclude=True)
+    context: str = Field(exclude=True)
 
     # Acting on projects
-    five_year_prios: PriorityTable
-    yearly_prios: PriorityTable
-    quarterly_prios: PriorityTable
-    monthly_prios: PriorityTable
-    weekly_prios: PriorityTable
+    five_year_prios: PriorityTable = PriorityTable()
+    yearly_prios: PriorityTable = PriorityTable()
+    quarterly_prios: PriorityTable = PriorityTable()
+    monthly_prios: PriorityTable = PriorityTable()
+    weekly_prios: PriorityTable = PriorityTable()
 
     # Acting on tasks
-    daily_prios: PriorityTable
+    daily_prios: PriorityTable = PriorityTable()
 
     current_timeframe: Timeframe = Timeframe.five_year
 
@@ -241,18 +248,28 @@ class Collection(BaseModel):
 
 
     @staticmethod
-    def load(path: Path):
+    def load(context=None):
+        if context is None:
+            if METADATA_FILE.is_file():
+                context = json.loads(METADATA_FILE.read_text())["current_context"]
+            else:
+                context = "private"
+
+        path = CONTEXT[context]
         if not (path / "tasks.json").is_file():
-            return Collection(tasks={}, projects={}, source_dir=path)
+            return Collection(tasks={}, projects={}, context=context)
 
         with (path / "tasks.json").open("r") as f:
-            collection = Collection(**json.load(f), source_dir=path)
+            collection = Collection(**json.load(f), context=context)
             collection.validate()
             return collection
 
     def save(self):
-        with (self.source_dir / "tasks.json").open("w") as f:
+        with (CONTEXT[self.context] / "tasks.json").open("w") as f:
             f.write(self.model_dump_json(indent=4))
+
+        with METADATA_FILE.open("w") as f:
+            json.dump(dict(current_context=self.context), f, ensure_ascii=False, indent=4)
 
     def validate(self):
         for task in self.tasks.values():
@@ -270,7 +287,7 @@ class Collection(BaseModel):
 
 @contextmanager
 def collection():
-    collection = Collection.load(Path.home() / "notes/buckets")
+    collection = Collection.load()
     yield collection
     collection.save()
 
@@ -460,6 +477,12 @@ def render_rows(w: Window, index: int, labels: list[str], rows: list[list[Render
             else:
                 col_widths[i] = max(col_widths[i], len(elem.content))
 
+    for i, label in enumerate(labels):
+        w.screen.addstr(i, 0, label)
+
+    if len(col_widths) == 0:
+        return
+
     minimal_width = col_widths[index] + label_length + 1
     while index > 0 and minimal_width + col_widths[index-1] + 1 < width:
         index -= 1
@@ -467,7 +490,6 @@ def render_rows(w: Window, index: int, labels: list[str], rows: list[list[Render
 
 
     for i, row in enumerate(rows):
-        w.screen.addstr(i, 0, labels[i])
         start = label_length + 1
 
         if index != 0:
@@ -652,7 +674,8 @@ class PlanningMode(WindowMode):
             if i == self.index:
                 attr = attr | curses.A_REVERSE
             w.screen.addstr(i, 0, f"{pid}: {c.projects[pid].title}", attr)
-        render_project_preview(w, c, self.project_ids[self.index], curses.COLS // 2)
+        if len(self.project_ids) > 0:
+            render_project_preview(w, c, self.project_ids[self.index], curses.COLS // 2)
 
     def handle_input(self, ch: str, c: Collection) -> Optional[WindowMode]:
         if self.selecting_priority:
@@ -750,24 +773,29 @@ class MainWindow(WindowMode):
             yield "p", f"Plan {c.current_timeframe.to_s()}"
 
 
-def win_main(w: Window, c: Collection):
-    state = MainWindow(c)
+def win_main(w: Window):
+    collection = Collection.load()
+    state = MainWindow(collection)
 
     SPECIAL_KEYS = { "\t": "TAB" }
 
     while True:
         w.screen.clear()
-        state.render_main_window(w, c)
+        state.render_main_window(w, collection)
 
         commands = { 
-            "q": "Quit",
+            "q": "Quit"
         }
 
-        for cmd, name in state.available_commands(c):
+        # TODO: Is there a better way to do this check?
+        if isinstance(state, MainWindow):
+            commands["c"] = "Switch Context"
+
+        for cmd, name in state.available_commands(collection):
             assert cmd not in commands
             commands[cmd] = name
 
-        command_bar_str = ""
+        command_bar_str = f"[{collection.context}]  "
         for key, name in commands.items():
             if key in SPECIAL_KEYS:
                 key = f"<{SPECIAL_KEYS[key]}>"
@@ -784,10 +812,22 @@ def win_main(w: Window, c: Collection):
         w.screen.refresh()
         if ch.lower() == "q":
             break
+        if ch.lower() == "c":
+            if collection.context == "private":
+                new_context = "work"
+            else:
+                new_context = "private"
+            collection.save()
+            collection = Collection.load(new_context)
+            state = MainWindow(collection)
+            continue
 
-        new_state = state.handle_input(ch, c)
+        new_state = state.handle_input(ch, collection)
         if new_state is not None:
             state = new_state
+
+
+    collection.save()
 
 
 def main():
@@ -798,8 +838,7 @@ def main():
         func = args.func
     except AttributeError:
         with window_manager() as w:
-            with collection() as c:
-                win_main(w, c)
+            win_main(w)
         return
     func(args)
 
