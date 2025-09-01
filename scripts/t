@@ -439,16 +439,20 @@ def create_parsers() -> ArgumentParser:
 
     return parser
 
+@dataclass
+class RenderElement:
+    content: str
+    attr: int = 0
 
-def render_rows(w: Window, rows: list[list[str]], width: int):
+def render_rows(w: Window, rows: list[list[RenderElement]], width: int):
     col_widths = []
 
     for row in rows:
         for i, elem in enumerate(row):
             if len(col_widths) <= i:
-                col_widths.append(len(elem))
+                col_widths.append(len(elem.content))
             else:
-                col_widths[i] = max(col_widths[i], len(elem))
+                col_widths[i] = max(col_widths[i], len(elem.content))
 
     for i, row in enumerate(rows):
         start = 0
@@ -458,19 +462,17 @@ def render_rows(w: Window, rows: list[list[str]], width: int):
             if remaining_space < 3:
                 break
 
-            if remaining_space < len(elem):
-                elem = elem[0:remaining_space-3] + "..."
+            if remaining_space < len(elem.content):
+                elem.content = elem.content[0:remaining_space-3] + "..."
 
-            w.screen.addstr(i, start, elem)
+            w.screen.addstr(i, start, elem.content, elem.attr)
             start += col_widths[j] + 1
-
-
 
 
 @dataclass
 class ProjectPreviewTable:
     project_id_rows: list[list[str]] 
-    selected_x: int = 1
+    selected_x: int = 0
     selected_y: int = 0
 
     @staticmethod
@@ -514,7 +516,7 @@ class ProjectPreviewTable:
             list(rows[Timeframe.day]),
         ])
 
-    def render(self, w, c):
+    def render(self, w, c, width):
         labels = [
             "Next Five Years:",
             "This Year:",
@@ -526,13 +528,29 @@ class ProjectPreviewTable:
 
         rows = []
         for i, l in enumerate(labels):
-            rows.append([l])
-            rows[-1].extend([c.projects[pid].title for pid in self.project_id_rows[i]])
-        render_rows(w, rows, curses.COLS)
+            rows.append([RenderElement(content=l)])
+            selected_x = min(self.selected_x, len(self.project_id_rows[i])-1)
+            for j, pid in enumerate(self.project_id_rows[i]):
+                attr = 0
+                if self.selected_y == i and selected_x == j:
+                    attr = curses.A_REVERSE
+                rows[-1].append(RenderElement(content=c.projects[pid].title, attr=attr))
+        render_rows(w, rows, width)
+
+    def width(self):
+        return max(len(row) for row in self.project_id_rows)
+
+    def height(self):
+        return len(self.project_id_rows)
 
 
-def render_project_preview(w: Window, c: Collection, pid: str):
-    width = curses.COLS // 2
+    def selected(self):
+        if len(self.project_id_rows[self.selected_y]) == 0:
+            return None
+        return self.project_id_rows[self.selected_y][min(self.selected_x, len(self.project_id_rows[self.selected_y])-1)]
+
+
+def render_project_preview(w: Window, c: Collection, pid: str, width):
     scr = w.screen.subwin(curses.LINES-3, width, 0, curses.COLS - width)
     scr.box()
 
@@ -655,9 +673,11 @@ class MainWindow(WindowMode):
         self.table = ProjectPreviewTable.from_collection(c)
 
     def render_main_window(self, w: Window, c: Collection):
-        self.table.render(w, c)
-        # TODO: rewrite table to support project preview
-        # render_project_preview(w, c, self.project_ids[self.index])
+        width = curses.COLS // 2
+        self.table.render(w, c, width)
+        pid = self.table.selected()
+        if pid is not None:
+            render_project_preview(w, c, pid, width)
 
     def handle_input(self, ch: str, c: Collection) -> Optional[WindowMode]:
         if ch.lower() == "r":
@@ -677,10 +697,8 @@ class MainWindow(WindowMode):
         if ch == "KEY_DOWN" or ch.lower() == "j":
             self.table.selected_y += 1
 
-        self.table.selected_x = (self.table.selected_x + self.table.width()) % self.table.width()
-        if self.table.selected_x == 0:
-            self.table.selected_x = 1
-        self.table.selected_y = (self.table.selected_y + self.table.height()) % self.table.height()
+        self.table.selected_y = max(0, min(self.table.selected_y, self.table.height()))
+        self.table.selected_x = max(0, min(self.table.selected_x, self.table.width()))
 
         return None
 
