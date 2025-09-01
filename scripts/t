@@ -314,8 +314,19 @@ class Collection(BaseModel):
             json.dump(dict(current_context=self.context), f, ensure_ascii=False, indent=4)
 
     def validate(self):
+        # TODO: Turn this into proper errors
+        # Also, create a dialog to fix these errors if they appear
+        # Right now, the tool doesn't start and I have to manually edit the tasks.json
+        # to resolve these errors
         for task in self.tasks.values():
             assert task.project_id is None or task.project_id in self.projects
+
+        for file in CONTEXT[self.context].iterdir():
+            if file.is_file() and file.name != "tasks.json":
+                assert file.suffix == ".md", file
+                assert file.stem in self.projects, f"Orphaned file {file.name}"
+            if file.is_dir():
+                assert file.name in self.projects, f"Orphaned directory {file.name}"
 
         for project in self.projects.values():
             for task in project.tasks:
@@ -688,6 +699,20 @@ def render_project_preview(w: Window, c: Collection, pid: str, width):
         add_str("Tasks")
         for tid in p.tasks:
             add_str(f"- [ ] {c.tasks[tid].title}")
+
+    attachment_dir = CONTEXT[c.context] / pid
+    if attachment_dir.is_dir():
+        add_str("Attachments", curses.A_BOLD)
+        for file in attachment_dir.iterdir():
+            add_str(f"- {file.relative_to(attachment_dir)}")
+
+    project_file = CONTEXT[c.context] / f"{pid}.md"
+    if project_file.is_file():
+        with project_file.open() as f:
+            for line in f.readlines():
+                add_str(line)
+                if h > curses.LINES-5: # Why 5? Stop using so many constants when layouting in new version
+                    break
 
 
 class WindowMode(Protocol):
