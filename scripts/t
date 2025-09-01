@@ -20,6 +20,8 @@ import curses
 from dataclasses import dataclass, field as DCField
 from collections import defaultdict
 import sys
+import tempfile
+import os
 
 from rich import print
 
@@ -63,11 +65,35 @@ class Window:
         curses.endwin()
         self.screen = None
 
-    def run_terminal_app(self, *args: str, input: Optional[str]=None):
-        self.reset()
-        res = subprocess.run(*args, input=input, text=True, stdout=subprocess.PIPE)
-        self.initialize()
-        return res
+
+def write_with_editor(w: Window, prompt: str) -> Optional[str]:
+    fd, path = tempfile.mkstemp()
+    os.close(fd)
+    with open(path, "w") as f:
+        f.write(prompt)
+
+    mtime = os.path.getmtime(path)
+
+    w.reset()
+
+    try:
+        subprocess.run(["nvim", path]).check_returncode()
+    finally:
+        w.initialize()
+
+    new_mtime = os.path.getmtime(path)
+    if mtime == new_mtime:
+        return None
+
+
+    text = None
+    with open(path, 'r') as f:
+        text = f.read()
+        if text.startswith(prompt):
+            text = text[len(prompt):]
+
+    os.remove(path)
+    return text
 
 
 @contextmanager
@@ -99,6 +125,20 @@ class Timeframe(IntEnum):
     quarter = auto()
     year = auto()
     five_year = auto()
+
+    def downwards(self, until):
+        it = self
+        while it.value > until.value:
+            yield it
+            it = it.smaller()
+
+    def smaller(self):
+        assert self != Timeframe.day
+        return Timeframe(self.value - 1)
+
+    def bigger(self):
+        assert self != Timeframe.five_year
+        return Timeframe(self.value + 1)
 
     @staticmethod
     def from_str(val: str) -> "Timeframe":
@@ -184,6 +224,7 @@ class Collection(BaseModel):
     daily_prios: PriorityTable = PriorityTable()
 
     current_timeframe: Timeframe = Timeframe.five_year
+    current_plans: dict[Timeframe, str] = Field(default_factory=dict)
 
     def current_prios(self):
         if self.current_timeframe == Timeframe.five_year:
@@ -463,10 +504,10 @@ class RenderElement:
     content: str
     attr: int = 0
 
-def render_rows(w: Window, index: int, labels: list[str], rows: list[list[RenderElement]], width: int):
+def render_rows(w: Window, index: int, labels: list[RenderElement], rows: list[list[RenderElement]], width: int):
     assert len(labels) == len(rows)
 
-    label_length = max(len(label) for label in labels)
+    label_length = max(len(label.content) for label in labels)
 
     col_widths = []
 
@@ -478,19 +519,20 @@ def render_rows(w: Window, index: int, labels: list[str], rows: list[list[Render
                 col_widths[i] = max(col_widths[i], len(elem.content))
 
     for i, label in enumerate(labels):
-        w.screen.addstr(i, 0, label)
+        w.screen.addstr(i, 0, label.content, label.attr)
+        w.screen.addstr(i, label_length, ":")
 
     if len(col_widths) == 0:
         return
 
-    minimal_width = col_widths[index] + label_length + 1
+    minimal_width = col_widths[index] + label_length + 2
     while index > 0 and minimal_width + col_widths[index-1] + 1 < width:
         index -= 1
         minimal_width += col_widths[index] + 1
 
 
     for i, row in enumerate(rows):
-        start = label_length + 1
+        start = label_length + 2
 
         if index != 0:
             w.screen.addstr(i, start, "... ")
@@ -559,13 +601,18 @@ class ProjectPreviewTable:
         ])
 
     def render(self, w, c, width):
+        # TODO: I could just render the labels manually here and pass on a different x coordinate as a starting point
+        # for the rows. That would make this initialisation a bit easier, I'd think
+        def highlight_timeframe(c, t):
+            return curses.A_REVERSE if c.current_timeframe == t else 0
+
         labels = [
-            "Next Five Years:",
-            "This Year:",
-            "This Quarter:",
-            "This Month:",
-            "This Week:",
-            "Today:"
+            RenderElement(content="Next Five Years ", attr=highlight_timeframe(c, Timeframe.five_year)),
+            RenderElement(content="This Year", attr=highlight_timeframe(c, Timeframe.year)),
+            RenderElement(content="This Quarter", attr=highlight_timeframe(c, Timeframe.quarter)),
+            RenderElement(content="This Month", attr=highlight_timeframe(c, Timeframe.month)),
+            RenderElement(content="This Week", attr=highlight_timeframe(c, Timeframe.week)),
+            RenderElement(content="Today", attr=highlight_timeframe(c, Timeframe.day))
         ]
 
         rows = []
@@ -646,7 +693,7 @@ class WindowMode(Protocol):
     def render_main_window(self, w: Window, c: Collection):
         pass
 
-    def handle_input(self, ch: str, c: Collection) -> Optional["WindowMode"]:
+    def handle_input(self, ch: str, w: Window, c: Collection) -> Optional["WindowMode"]:
         pass
 
     def available_commands(self, c: Collection):
@@ -662,6 +709,13 @@ class PlanningMode(WindowMode):
         self.selecting_priority = False
 
     def render_main_window(self, w: Window, c: Collection):
+        h = 0
+        for tf in Timeframe.five_year.downwards(until=c.current_timeframe):
+            w.screen.addstr(h, 0, f"Plan ({tf.to_s()}): {c.current_plans[tf].strip()}")
+            h += 1
+
+        h += 1
+
         for i, pid in enumerate(self.project_ids):
             attr = 0
             if c.is_prio_a(pid):
@@ -673,11 +727,11 @@ class PlanningMode(WindowMode):
 
             if i == self.index:
                 attr = attr | curses.A_REVERSE
-            w.screen.addstr(i, 0, f"{pid}: {c.projects[pid].title}", attr)
+            w.screen.addstr(i+h, 0, f"{pid}: {c.projects[pid].title}", attr)
         if len(self.project_ids) > 0:
             render_project_preview(w, c, self.project_ids[self.index], curses.COLS // 2)
 
-    def handle_input(self, ch: str, c: Collection) -> Optional[WindowMode]:
+    def handle_input(self, ch: str, w: Window, c: Collection) -> Optional[WindowMode]:
         if self.selecting_priority:
             if ch.lower() == "a":
                 c.current_prios().set_a(self.project_ids[self.index])
@@ -693,6 +747,22 @@ class PlanningMode(WindowMode):
 
             self.selecting_priority = False
             return None
+
+        if ch.lower() == "e":
+            raise NotImplementedError("Editing projects is not implemented yet")
+
+        if ch.lower() == "c":
+            raise NotImplementedError("Creating projects is not implemented yet")
+
+        if ch.lower() == "f":
+            # TODO: THis should probably be its own window state
+            # For this, we probably need a stack of window states so we know where we need to return to
+            commit_message = write_with_editor(w, f"[{c.context}] Commit to {c.current_timeframe.to_s()} plan\n")
+            if commit_message is not None:
+                c.current_plans[c.current_timeframe] = commit_message
+                c.current_timeframe = c.current_timeframe.smaller()
+                return MainWindow(c)
+
 
         if ch.lower() == "p":
             self.selecting_priority = True
@@ -738,7 +808,7 @@ class MainWindow(WindowMode):
         if pid is not None and self.show_project_overview:
             render_project_preview(w, c, pid, width)
 
-    def handle_input(self, ch: str, c: Collection) -> Optional[WindowMode]:
+    def handle_input(self, ch: str, w: Window, c: Collection) -> Optional[WindowMode]:
         if ch.lower() == "r":
             pass
         elif ch.lower() == "p":
@@ -767,7 +837,7 @@ class MainWindow(WindowMode):
     def available_commands(self, c):
         yield "\t", "Toggle project preview"
         if c.current_timeframe != Timeframe.five_year:
-            yield "r", f"Review {c.current_timeframe.to_s()}"
+            yield "r", f"Review {c.current_timeframe.bigger().to_s()}"
 
         if c.current_timeframe != Timeframe.day:
             yield "p", f"Plan {c.current_timeframe.to_s()}"
@@ -812,7 +882,10 @@ def win_main(w: Window):
         w.screen.refresh()
         if ch.lower() == "q":
             break
-        if ch.lower() == "c":
+        # I need to check if we're in main window because the planning window
+        # uses (c) for creating a new project
+        # TODO: Create a better connection between commands and their keybindings
+        if ch.lower() == "c" and isinstance(state, MainWindow):
             if collection.context == "private":
                 new_context = "work"
             else:
@@ -822,7 +895,7 @@ def win_main(w: Window):
             state = MainWindow(collection)
             continue
 
-        new_state = state.handle_input(ch, collection)
+        new_state = state.handle_input(ch, w, collection)
         if new_state is not None:
             state = new_state
 
