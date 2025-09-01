@@ -11,7 +11,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 from pydantic import BaseModel, Field
 from enum import IntEnum, auto
-from typing import Optional, Protocol
+from typing import Any, Optional, Protocol
 import json
 from contextlib import contextmanager
 import subprocess
@@ -41,6 +41,7 @@ class Window:
 
         curses.noecho()
         curses.cbreak()
+        curses.curs_set(0)
 
         try:
             curses.start_color()
@@ -699,6 +700,130 @@ class WindowMode(Protocol):
     def available_commands(self, c: Collection):
         yield from ()
 
+@dataclass
+class FormField:
+    name: str
+    value: Optional[str] = None
+    editable: bool = True
+
+@dataclass
+class ProjectCreateScreen:
+    scr: Any
+    timeframe: Timeframe
+    fields: list[FormField]
+    selected_field_index: Optional[int] = 0
+    selected_menu_index: Optional[int] = None
+
+    @staticmethod
+    def create(w: Window, c: Collection):
+        return ProjectCreateScreen(
+            scr=w.screen.subwin(curses.LINES // 3, curses.COLS // 3, curses.LINES // 3, curses.COLS // 3),
+            fields=[
+                FormField(name="id"),
+                FormField(name="name"),
+                FormField(name="description"),
+                FormField(name="timeframe", value=c.current_timeframe.name, editable=False)
+            ],
+            timeframe=c.current_timeframe
+        )
+
+    def render(self):
+        self.scr.clear()
+        self.scr.box()
+
+        self.scr.addstr(0, 1, "Create new project")
+
+        def highlight_if_eq(a, b):
+            return curses.A_REVERSE if a == b else 0
+
+        for i, field in enumerate(self.fields):
+            self.scr.addstr(2+i, 2, field.name)
+            self.scr.addstr(2+i, 14, ":")
+            if field.value is not None:
+                self.scr.addstr(2+i, 16, field.value, highlight_if_eq(self.selected_field_index, i))
+            else:
+                self.scr.addstr(2+i, 16, "_" * 16, highlight_if_eq(self.selected_field_index, i))
+
+        self.scr.addstr(curses.LINES // 3 - 3, 5, "<cancel>", highlight_if_eq(self.selected_menu_index, 0))
+        self.scr.addstr(curses.LINES // 3 - 3, 15, "<create>", highlight_if_eq(self.selected_menu_index, 1))
+
+
+    def handle_input(self, w: Window, ch: str):
+        if self.selected_field_index is not None:
+            if ch == "KEY_UP" or ch.lower() == "k":
+                self.selected_field_index -= 1
+                if self.selected_field_index < 0:
+                    self.selected_field_index = 0
+
+            if ch == "KEY_DOWN" or ch.lower() == "j":
+                self.selected_field_index += 1
+                while not self.fields[self.selected_field_index].editable:
+                    self.selected_field_index += 1
+                    if self.selected_field_index >= len(self.fields):
+                        self.selected_field_index = None
+                        self.selected_menu_index = 1
+                        break
+
+            if ch == "\n":
+                f = self.fields[self.selected_field_index]
+                if f.value is None:
+                    f.value = ""
+
+                self.scr.move(2+self.selected_field_index, 16 + len(f.value))
+                curses.curs_set(1)
+                self.scr.refresh()
+                sys.stdout.write("\033[4 q")
+                sys.stdout.flush()
+
+                key = w.screen.getkey()
+                while key != "\n":
+                    if key == "\b" or key == "\x7f":
+                        self.scr.addch(2+self.selected_field_index, 16 + len(f.value), " ", 0)
+                        f.value = f.value[0:-1]
+                    elif key == "\x1b": # Escape
+                        # TODO: Reset inserted value
+                        break
+                    else:
+                        # TODO: Actually handle escape sequences here, similar to what textpad.TextBox does
+                        assert key.isalnum() or key == " " or key == "-", f"Encountered invalid key {repr(key)}"
+                        self.scr.addch(2+self.selected_field_index, 16 + len(f.value), key, 0)
+                        f.value += key
+
+                    self.scr.refresh()
+                    key = w.screen.getkey()
+
+                sys.stdout.write("\033[0 q")
+                sys.stdout.flush()
+                curses.curs_set(1)
+                self.scr.refresh()
+
+        if self.selected_menu_index is not None:
+            if ch == "KEY_UP" or ch.lower() == "k":
+                self.selected_menu_index = None
+                self.selected_field_index = len(self.fields) -1
+                while not self.fields[self.selected_field_index].editable:
+                    self.selected_field_index -= 1
+
+            if ch == "KEY_RIGHT" or ch.lower() == "l":
+                self.selected_menu_index = 1
+
+            if ch == "KEY_LEFT" or ch.lower() == "h":
+                self.selected_menu_index = 0
+
+
+            if ch == "\n":
+                if self.selected_menu_index == 0:
+                    return True, None, None
+                assert self.selected_menu_index == 1
+                return True, self.fields[0].value, Project(
+                    tasks=set(),
+                    title=self.fields[1].value,
+                    description=self.fields[2].value,
+                    parents=set(),
+                    timeframe=self.timeframe
+                )
+        return False, None, None
+
 
 class PlanningMode(WindowMode):
     def __init__(self, c: Collection):
@@ -707,6 +832,7 @@ class PlanningMode(WindowMode):
             pid for pid, p in c.projects.items() if p.timeframe == c.current_timeframe
         ]
         self.selecting_priority = False
+        self.create_scr = None
 
     def render_main_window(self, w: Window, c: Collection):
         h = 0
@@ -731,7 +857,21 @@ class PlanningMode(WindowMode):
         if len(self.project_ids) > 0:
             render_project_preview(w, c, self.project_ids[self.index], curses.COLS // 2)
 
+        if self.create_scr is not None:
+            self.create_scr.render()
+
     def handle_input(self, ch: str, w: Window, c: Collection) -> Optional[WindowMode]:
+        if self.create_scr is not None:
+            done, pid, proj = self.create_scr.handle_input(w, ch)
+            if done:
+                self.create_scr = None
+            if pid is not None:
+                assert proj is not None
+                assert pid not in c.projects
+                c.projects[pid] = proj
+                self.project_ids.append(pid)
+            return None
+
         if self.selecting_priority:
             if ch.lower() == "a":
                 c.current_prios().set_a(self.project_ids[self.index])
@@ -752,7 +892,8 @@ class PlanningMode(WindowMode):
             raise NotImplementedError("Editing projects is not implemented yet")
 
         if ch.lower() == "c":
-            raise NotImplementedError("Creating projects is not implemented yet")
+            # TODO: Should I use the panels API here?
+            self.create_scr = ProjectCreateScreen.create(w, c)
 
         if ch.lower() == "f":
             # TODO: THis should probably be its own window state
