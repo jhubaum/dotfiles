@@ -440,7 +440,7 @@ def create_parsers() -> ArgumentParser:
     return parser
 
 
-def render_rows(w: Window, rows: list[list[str]]):
+def render_rows(w: Window, rows: list[list[str]], width: int):
     col_widths = []
 
     for row in rows:
@@ -453,8 +453,17 @@ def render_rows(w: Window, rows: list[list[str]]):
     for i, row in enumerate(rows):
         start = 0
         for j, elem in enumerate(row):
+            remaining_space = width - start
+
+            if remaining_space < 3:
+                break
+
+            if remaining_space < len(elem):
+                elem = elem[0:remaining_space-3] + "..."
+
             w.screen.addstr(i, start, elem)
             start += col_widths[j] + 1
+
 
 
 
@@ -519,7 +528,7 @@ class ProjectPreviewTable:
         for i, l in enumerate(labels):
             rows.append([l])
             rows[-1].extend([c.projects[pid].title for pid in self.project_id_rows[i]])
-        render_rows(w, rows)
+        render_rows(w, rows, curses.COLS)
 
 
 def render_project_preview(w: Window, c: Collection, pid: str):
