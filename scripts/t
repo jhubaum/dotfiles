@@ -44,6 +44,7 @@ class Window:
         curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
         curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)
         curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
+        curses.init_pair(4, 8, -1)
 
     def reset(self):
         if self.screen is None:
@@ -550,9 +551,21 @@ class ProjectPreviewTable:
             row = []
             selected_x = min(self.selected_x, len(self.project_id_rows[i])-1)
             for j, pid in enumerate(self.project_id_rows[i]):
-                attr = 0
+                attr = None
+                if c.is_prio_a(pid):
+                    attr = curses.color_pair(1)
+                elif c.is_prio_b(pid):
+                    attr = curses.color_pair(2)
+                elif c.is_prio_c(pid):
+                    attr = curses.color_pair(3)
+
                 if self.selected_y == i and selected_x == j:
-                    attr = curses.A_REVERSE
+                    if attr is None:
+                        attr = 0
+                    attr |= curses.A_REVERSE
+
+                if attr is None:
+                    attr = curses.color_pair(4)
                 row.append(RenderElement(content=c.projects[pid].title, attr=attr))
             rows.append(row)
         render_rows(w, self.selected_x, labels, rows, width)
