@@ -920,6 +920,25 @@ class PlanningMode(WindowMode):
             # TODO: Should I use the panels API here?
             self.create_scr = ProjectCreateScreen.create(w, c)
 
+        if ch.lower() == "a":
+            # TODO: Make sure that this doesn't create circular dependencies
+            project_picker = {
+                f"{pid}: {p.title} [{p.timeframe.name}]": pid for pid, p in c.projects.items() if pid != self.project_ids[self.index]
+            }
+            w.reset()
+            p = pick(project_picker)
+            if p is not None:
+                pid = project_picker[p]
+                parent = c.projects[pid]
+                p = c.projects[self.project_ids[self.index]]
+                p.parents.add(pid)
+                if parent.timeframe <= p.timeframe:
+                    p.timeframe = parent.timeframe.smaller()
+                    self.project_ids.pop(self.index)
+                    self.index = max(0, self.index-1)
+
+            w.initialize()
+
         if ch.lower() == "f":
             # TODO: THis should probably be its own window state
             # For this, we probably need a stack of window states so we know where we need to return to
@@ -957,6 +976,7 @@ class PlanningMode(WindowMode):
         yield "e", "Edit project"
         yield "d", "Delete project"
         yield "p", "Set priority"
+        yield "a", "Add parent"
         yield "f", "Finish Plan"
 
 
