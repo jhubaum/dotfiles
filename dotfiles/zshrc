@@ -35,3 +35,4 @@ export NVM_DIR="$HOME/.nvm"
 
 # snap
 source /etc/profile.d/apps-bin-path.sh
+alias t="task-tree"
