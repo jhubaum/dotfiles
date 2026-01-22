@@ -1,0 +1,60 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = "==3.13"
+# dependencies = [
+#   "pydantic",
+# ]
+# ///
+
+from pydantic import BaseModel
+from datetime import date as Date
+from pathlib import Path
+import json
+
+STATE_PATH = Path("~/.checkin_state.json").expanduser()
+
+class State(BaseModel):
+    checked_in: Date | None = None
+    checked_out: Date | None = None
+
+
+    @staticmethod
+    def load() -> "State":
+        if not STATE_PATH.is_file():
+            return State(people=[])
+
+        with STATE_PATH.open("r") as f:
+            return State(**json.load(f))
+
+    def store(self):
+        with STATE_PATH.open("w") as f:
+            f.write(self.model_dump_json(indent=4))
+
+
+state = State.load()
+
+if state.checked_out == Date.today():
+    print("You have already checked out for today")
+    exit()
+
+
+CHECKLIST = [
+    "Cleared workspace document",
+    "Cleared todolist for the day",
+    "Prepared todolist for tomorrow",
+    "Wrote status update for the day",
+    "Said 'Shutdown complete' out loud"
+]
+
+
+try:
+    for item in CHECKLIST:
+        while input(item + ": ").strip().lower() != "yes":
+            print("Please type `yes` to continue")
+
+except KeyboardInterrupt:
+    exit()
+
+
+state.checked_out = state.checked_in
+state.store()
