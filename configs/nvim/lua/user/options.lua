@@ -72,11 +72,29 @@ autocmd CursorHold * lua vim.diagnostic.open_float(nil, { focusable = false })
 vim.g.mapleader = ' '
 
 -- Use OSC 52 for clipboard to work over SSH/mosh through tmux
+local function osc52_copy(text)
+  local base64 = vim.base64.encode(text)
+  local osc52 = string.format('\027]52;c;%s\a', base64)
+
+  -- If inside tmux, wrap in passthrough sequence
+  if os.getenv('TMUX') then
+    osc52 = string.format('\027Ptmux;\027%s\027\\', osc52)
+  end
+
+  -- Write to terminal
+  io.stdout:write(osc52)
+  io.stdout:flush()
+end
+
 vim.g.clipboard = {
-  name = 'OSC 52',
+  name = 'OSC 52 (tmux aware)',
   copy = {
-    ['+'] = require('vim.ui.clipboard.osc52').copy('+'),
-    ['*'] = require('vim.ui.clipboard.osc52').copy('*'),
+    ['+'] = function(lines)
+      osc52_copy(table.concat(lines, '\n'))
+    end,
+    ['*'] = function(lines)
+      osc52_copy(table.concat(lines, '\n'))
+    end,
   },
   paste = {
     ['+'] = require('vim.ui.clipboard.osc52').paste('+'),
