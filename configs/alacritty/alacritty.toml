@@ -7,3 +7,6 @@ decorations = "None"
 opacity = 0.85
 [font]
 size = 8
+
+[terminal]
+osc52 = "CopyPaste"
