@@ -63,6 +63,12 @@ local function copy_gitlab_link(is_visual)
     vim.fn.setreg('+', url)
     print("Copied " .. url .. " to clipboard")
   end
+
+  -- Exit visual mode and jump to start of selection (like y does)
+  if is_visual then
+    vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<Esc>', true, false, true), 'n', false)
+    vim.api.nvim_win_set_cursor(0, {start_line, 0})
+  end
 end
 
 -- Keybindings
