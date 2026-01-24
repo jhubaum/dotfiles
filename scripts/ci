@@ -40,8 +40,12 @@ args = parser.parse_args()
 
 state = State.load()
 
-# Only run check-in on weekdays
-if args.check or Date.today().weekday() >= 5:
+if Date.today().weekday() >= 5:
+    if not args.check:
+        print("You don't need to check in on weekends")
+    exit()
+
+if args.check:
     if state.checked_in != Date.today():
         print("You haven't checked in for today. Please do so by running `ci`")
     exit()
