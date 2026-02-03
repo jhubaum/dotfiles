@@ -37,3 +37,6 @@ export NVM_DIR="$HOME/.nvm"
 source /etc/profile.d/apps-bin-path.sh
 alias t="task-tree"
 alias p="peops"
+alias cl="checklist"
+alias ci="checklist morning"
+alias co="checklist shutdown"

@@ -1,0 +1,184 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = "==3.13"
+# dependencies = [
+#   "pydantic",
+# ]
+# ///
+
+
+from pydantic import BaseModel
+from datetime import date as Date
+from pathlib import Path
+import json
+from argparse import ArgumentParser
+from dataclasses import dataclass
+
+
+STATE_PATH = Path("~/.checkin_state.json").expanduser()
+
+
+class State(BaseModel):
+    checked_in: Date | None = None
+    checked_out: Date | None = None
+
+    @staticmethod
+    def load() -> "State":
+        if not STATE_PATH.is_file():
+            return State(people=[])
+
+        with STATE_PATH.open("r") as f:
+            return State(**json.load(f))
+
+    def store(self):
+        with STATE_PATH.open("w") as f:
+            f.write(self.model_dump_json(indent=4))
+
+
+@dataclass
+class Step:
+    description: str
+    allow_implicit: bool = True
+
+
+@dataclass
+class Checklist:
+    name: str
+    steps: list[Step]
+    description: str | None = None
+    done_message: str | None = None
+
+
+CHECKLISTS = [
+    Checklist(
+        "morning",
+        description="The planning checklist to do each workday",
+        steps=[
+            Step(description="Sit down at desk"),
+            Step(description="Have Ivy Lee style tasks ready in BuJo"),
+            Step(description="Pick lunch for today"),
+            Step(description="Schedule time slots for each task and set alarm clocks"),
+            Step(description="Filled status update document", allow_implicit=False),
+        ],
+    ),
+    Checklist(
+        "focus",
+        description="The checklist to do before each deep work session",
+        steps=[
+            Step("Sit down at desk"),
+            Step("Prepare drinks and snacks"),
+            Step("Start pomodoro timer"),
+            Step("Start Halo Soundtrack in VLC"),
+        ],
+        done_message="Done. Now start writing about what to accomplish in this session",
+    ),
+    Checklist(
+        "shutdown",
+        steps=[
+            Step(description="Clear notes and todos from today"),
+            Step(description="Prepared todolist for tomorrow"),
+            Step(
+                description="Create new page for tomorrow in BuJo (unless it's Friday) and write down tasks"
+            ),
+            Step(description="Wrote status update for the day"),
+            Step(description="Said 'Shutdown complete' out loud"),
+        ],
+    ),
+]
+
+
+CHECK_IN_TRIGGER = "morning"
+CHECK_OUT_TRIGGER = "shutdown"
+
+
+def run_checklist(checklist: Checklist):
+    for step in checklist.steps:
+        label = (
+            step.description
+            + " "
+            + ("[Yes]" if step.allow_implicit else "[yes]")
+            + ": "
+        )
+        inp = input(label).strip().lower()
+        while not ((step.allow_implicit and len(inp) == 0) or inp == "yes"):
+            print("Please type `yes` to continue")
+            inp = input(label).strip().lower()
+
+    if checklist.done_message is not None:
+        print(checklist.done_message)
+
+
+def print_checklists():
+    for cl in CHECKLISTS:
+        s = cl.name
+        if cl.description is not None:
+            s += ": " + cl.description
+        print(s)
+
+    print()
+    print("Special triggers:")
+    print(f"Each morning before starting work: {CHECK_IN_TRIGGER}")
+    print(f"Each evening afetr work is done: {CHECK_OUT_TRIGGER}")
+
+
+def create_parser():
+    parser = ArgumentParser(description="Go through a checklist")
+    parser.add_argument(
+        "--list", action="store_true", help="List all available checklists"
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Check if the user already checked in and print a message if they haven't",
+    )
+    parser.add_argument("name", nargs="?", help="The name of the checklist to run")
+    return parser
+
+
+def main():
+    args = create_parser().parse_args()
+    state = State.load()
+
+    if args.list:
+        print_checklists()
+        return
+
+    if args.check:
+        if Date.today().weekday() >= 5 or state.checked_in == Date.today():
+            return
+
+        print("You haven't checked in for today. Please do so by running `ci`")
+        return
+
+    if args.name is None:
+        print(
+            "Please provide a checklist to run. Use `--list` to show all available checklists"
+        )
+        exit(1)
+
+    checklists_by_name = {c.name: c for c in CHECKLISTS}
+
+    if args.name not in checklists_by_name:
+        print(
+            f"'{args.name}' is not a valid checklist. Use `--list` to show all available checklists"
+        )
+        exit(1)
+
+    try:
+        run_checklist(checklists_by_name[args.name])
+    except KeyboardInterrupt:
+        return
+
+    if args.name == CHECK_IN_TRIGGER:
+        print("Checked in for today. Enjoy the day!")
+        state.checked_in = Date.today()
+        state.store()
+
+    if args.name == CHECK_OUT_TRIGGER:
+        print("Checked out for today. Enjoy the evening!")
+        state.checked_out = Date.today()
+        state.store()
+
+
+if __name__ == "__main__":
+    main()
