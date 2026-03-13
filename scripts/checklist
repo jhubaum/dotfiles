@@ -101,6 +101,16 @@ CHECKLISTS = [
             Step(description="Said 'Shutdown complete' out loud"),
         ],
     ),
+    Checklist(
+        "monthly-planning",
+        description="Steps to plan the month",
+        steps=[
+            Step(description="Pick the primary goal for this month"),
+            Step(description="Pick the primary system to improve this month"),
+            Step(description="Picked up to six routines to track"),
+            Step(description="Wrote monthly log in BuJo")
+        ]
+    )
 ]
 
 
