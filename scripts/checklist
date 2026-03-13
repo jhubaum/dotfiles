@@ -39,6 +39,23 @@ class State(BaseModel):
 class Step:
     description: str
     allow_implicit: bool = True
+    is_required: bool = True
+
+    def run(self):
+        allowed_options = set(["yes"])
+        if not self.is_required:
+            allowed_options.add("no")
+
+        options_label = f"{'Y' if self.allow_implicit else 'y'}es{'' if self.is_required else '/no'}"
+
+        label = f"{self.description} [{options_label}]: "
+        inp = input(label).strip().lower()
+        while not ((self.allow_implicit and len(inp) == 0) or inp in allowed_options):
+            if self.is_required:
+                print("Please type `yes` to continue")
+            else:
+                print("Please type `yes` or `no` to continue")
+            inp = input(label).strip().lower()
 
 
 @dataclass
@@ -93,16 +110,7 @@ CHECK_OUT_TRIGGER = "shutdown"
 
 def run_checklist(checklist: Checklist):
     for step in checklist.steps:
-        label = (
-            step.description
-            + " "
-            + ("[Yes]" if step.allow_implicit else "[yes]")
-            + ": "
-        )
-        inp = input(label).strip().lower()
-        while not ((step.allow_implicit and len(inp) == 0) or inp == "yes"):
-            print("Please type `yes` to continue")
-            inp = input(label).strip().lower()
+        step.run()
 
     if checklist.done_message is not None:
         print(checklist.done_message)
