@@ -8,5 +8,8 @@ opacity = 0.85
 [font]
 size = 8
 
+[font.normal]
+family = "FiraMono Nerd Font Mono"
+
 [terminal]
 osc52 = "CopyPaste"
