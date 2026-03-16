@@ -74,7 +74,7 @@ CHECKLISTS = [
             Step(description="Sit down at desk"),
             Step(description="Have Ivy Lee style tasks ready in BuJo"),
             Step(description="Pick lunch for today"),
-            Step(description="Schedule time slots for each task and set alarm clocks"),
+            Step(description="Schedule time slots for each task and set alarm clocks", is_required=False),
             Step(description="Filled status update document", allow_implicit=False),
         ],
     ),
