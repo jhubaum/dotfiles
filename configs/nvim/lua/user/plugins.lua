@@ -85,25 +85,14 @@ return packer.startup(function(use)
   })
 
   use({
-    "epwalsh/obsidian.nvim",
-    tag = "*",  -- recommended, use latest release instead of latest commit
-    requires = {
-      "nvim-lua/plenary.nvim",
-    },
-    config = function()
-      require("obsidian").setup({
-        ui = {
-          -- TODO: Look more into https://github.com/epwalsh/obsidian.nvim for config options
-          enable = false
-        },
-        workspaces = {
-          {
-            name = "personal",
-            path = "~/notes"
-          }
-        }
-      })
-    end,
+      'MeanderingProgrammer/render-markdown.nvim',
+      after = { 'nvim-treesitter' },
+      -- requires = { 'nvim-tree/nvim-web-devicons', opt = true },
+      config = function()
+          require('render-markdown').setup({
+            completions = { lsp = { enabled = true } },
+          })
+      end,
   })
 
   use "stevearc/oil.nvim"
