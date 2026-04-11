@@ -1,0 +1,44 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = "==3.13"
+# dependencies = [ "rich" ]
+# ///
+
+from rich import print
+
+from argparse import ArgumentParser
+
+
+steps = [
+    ("S", "Describe the situation (When/Where/Who/What)", "14:00, desk, need to start report"),
+    ("T", "List thoughts (key phrases only)", "Too tired, distracted"),
+    ("E", "List emotions + intensity (0-100%)", "dread 70%"),
+    ("D", """Identify cognitive distortions (one word)
+    - [bold]All-or-nothing thinking[/bold]: Viewing situations in black-and-white categories with no middle ground.
+    - [bold]Catastrophizing[/bold]: Expecting the worst possible outcome and treating it as likely.
+    - [bold]Mind reading[/bold]: Assuming you know what others are thinking without evidence.
+    - [bold]Fortune telling[/bold]: Predicting negative outcomes as if they are certain.
+    - [bold]Personalization[/bold]: Attributing external events to yourself without sufficient basis.
+    - [bold]Emotional reasoning[/bold]: Treating feelings as proof that something is true.
+    - [bold]Discounting positives[/bold]: Ignoring or minimizing positive experiences or evidence.
+    - [bold]Overgeneralization[/bold]: Drawing broad conclusions from a single event or limited evidence.""",
+    "catastrophizing"),
+    ("A", "Alternative thought (1 sentence)", "I can do 5 minutes without committing"),
+    ("N", "Next action (<5min)", "Open doc + write first sentence")
+]
+
+
+parser = ArgumentParser()
+parser.add_argument("--interactive", "-i", action="store_true")
+
+args = parser.parse_args()
+
+for s in steps:
+    print(f"[blue]{s[0]}[/blue] — {s[1]}")
+    print(f"  – [bright_black]e.g. {s[2]}[/bright_black]")
+
+    if args.interactive:
+        try:
+            input(">>> ")
+        except KeyboardInterrupt:
+            break
