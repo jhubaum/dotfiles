@@ -4,5 +4,3 @@ vim.filetype.add({
     ['^#!.*/env%s+-S%s+uv%s+run%s+%-%-script'] = 'python',
   },
 })
-
-print("Hello")

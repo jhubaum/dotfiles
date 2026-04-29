@@ -1,77 +1,72 @@
-local fn = vim.fn
+-- Automatically install lazy
+local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 
--- Automatically install packer
-local install_path = fn.stdpath "data" .. "/site/pack/packer/start/packer.nvim"
-if fn.empty(fn.glob(install_path)) > 0 then
-  PACKER_BOOTSTRAP = fn.system {
+if not vim.loop.fs_stat(lazypath) then
+  vim.fn.system({
     "git",
     "clone",
-    "--depth",
-    "1",
-    "https://github.com/wbthomason/packer.nvim",
-    install_path,
-  }
-  print "Installing packer close and reopen Neovim..."
-  vim.cmd [[packadd packer.nvim]]
+    "--filter=blob:none",
+    "https://github.com/folke/lazy.nvim.git",
+    lazypath,
+  })
 end
+
+vim.opt.rtp:prepend(lazypath)
 
 -- Autocommand that reloads neovim whenever you save the plugins.lua file
 vim.cmd [[
-  augroup packer_user_config
+  augroup lazy_user_config
     autocmd!
-    autocmd BufWritePost plugins.lua source <afile> | PackerSync
+    autocmd BufWritePost plugins.lua source <afile> | Lazy sync
   augroup end
 ]]
 
 -- Use a protected call so we don"t error out on first use
-local status_ok, packer = pcall(require, "packer")
+local status_ok, lazy = pcall(require, "lazy")
 if not status_ok then
   return
 end
 
--- Have packer use a popup window
-packer.init {
-  display = {
-    open_fn = function()
-      return require("packer.util").float { border = "rounded" }
-    end,
-  },
-}
-
-return packer.startup(function(use)
-  use "wbthomason/packer.nvim" -- Have packer manage itself
-
-  use 'williamboman/mason.nvim'
-  use 'williamboman/mason-lspconfig.nvim'
+return lazy.setup({
+  { 'williamboman/mason.nvim' },
+  { 'williamboman/mason-lspconfig.nvim' },
 
   -- Lsp
-  use "neovim/nvim-lspconfig"
-  use "anott03/nvim-lspinstall"
+  { "neovim/nvim-lspconfig" },
+  { "anott03/nvim-lspinstall" },
 
-  use 'mfussenegger/nvim-lint'
+  { 'mfussenegger/nvim-lint' },
 
   -- Rust
-  use 'simrat39/rust-tools.nvim'
+  {
+    'mrcjkb/rustaceanvim',
+    -- To avoid being surprised by breaking changes,
+    -- I recommend you set a version range
+    version = '^9',
+    -- This plugin implements proper lazy-loading (see :h lua-plugin-lazy).
+    -- No need for lazy.nvim to lazy-load it.
+    lazy = false,
+  },
 
-  use {
+  {
     'nvim-telescope/telescope.nvim',
-    requires = { { 'nvim-lua/plenary.nvim' } }
-  }
+    dependencies = { 'nvim-lua/plenary.nvim' }
+  },
 
   -- Fuzzy finder
-  use "nvim-lua/popup.nvim"
-  use "nvim-lua/plenary.nvim"
-  use "jremmen/vim-ripgrep"
+  { "nvim-lua/popup.nvim" },
+  { "nvim-lua/plenary.nvim" },
+  { "jremmen/vim-ripgrep" },
 
-  use {
+  {
     "ThePrimeagen/harpoon",
     branch = "harpoon2",
-    requires = { {"nvim-lua/plenary.nvim"} }
-  }
+    dependencies = { { "nvim-lua/plenary.nvim" } }
+  },
 
-   use({
+  {
     "hrsh7th/nvim-cmp",
-    requires = {
+    dependencies = {
       "onsails/lspkind.nvim",
       "hrsh7th/cmp-nvim-lsp",
       "hrsh7th/cmp-path",
@@ -82,31 +77,34 @@ return packer.startup(function(use)
     config = function()
       require "user.completion"
     end,
-  })
+  },
 
-  use({
-      'MeanderingProgrammer/render-markdown.nvim',
-      after = { 'nvim-treesitter' },
-      -- requires = { 'nvim-tree/nvim-web-devicons', opt = true },
-      config = function()
-          require('render-markdown').setup({
-            completions = { lsp = { enabled = true } },
-          })
-      end,
-  })
+  {
+    'MeanderingProgrammer/render-markdown.nvim',
+    dependencies = {
+      'nvim-treesitter',
+      'nvim-tree/nvim-web-devicons'
+    },
+    config = function()
+      require('render-markdown').setup({
+        completions = { lsp = { enabled = true } },
+      })
+    end,
+  },
 
-  use "stevearc/oil.nvim"
+  { "stevearc/oil.nvim" },
 
   -- git
-  use 'tpope/vim-fugitive'
+  { 'tpope/vim-fugitive' },
 
-  use {
+  {
     "nvim-treesitter/nvim-treesitter",
-    run = function() require("nvim-treesitter.install").update({ with_sync = true }) end,
-  }
-  use { 'sindrets/diffview.nvim', requires = 'nvim-lua/plenary.nvim' }
-  use "sheerun/vim-polyglot"
+    lazy = false,
+    build = ':TSUpdate'
+  },
+  { 'sindrets/diffview.nvim', dependencies = { 'nvim-lua/plenary.nvim' } },
+  { "sheerun/vim-polyglot" },
 
-  use "folke/tokyonight.nvim"
-  use 'mbbill/undotree'
-end)
+  { "folke/tokyonight.nvim" },
+  { 'mbbill/undotree' },
+})

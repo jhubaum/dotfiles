@@ -1,6 +1,5 @@
 require("mason").setup {}
 require("mason-lspconfig").setup {}
-require("rust-tools").setup {}
 
 vim.lsp.config.lua_ls = {
   settings = {
