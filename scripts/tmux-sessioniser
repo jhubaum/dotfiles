@@ -5,13 +5,13 @@ with_worktrees() {
     folder="$(realpath "$1")"
     if [ ! -d "$folder/.git" ]; then
         # folder is not a git repository
-        echo "$folder"
+        echo "$1"
         return
     fi
     worktree_count=$(git --git-dir="$folder/.git" worktree list | wc -l)
     if [ "$worktree_count" -eq 1 ]; then
         # repo only has one worktree
-        echo "$folder"
+        echo "$1"
         return
     fi
     worktrees=$(git --git-dir="$folder/.git" worktree list | awk '{print $1 ":\t\t" $3}')
