@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+repo=$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")
+
 with_worktrees() {
     local folder
     folder="$(realpath "$1")"
@@ -24,6 +26,34 @@ project_folders() {
     done < <(project-folders)
 }
 
+# Lay out the windows of a freshly created session by running its startup
+# script from tmux-sessions/, falling back to the default layout below.
+session_startup() {
+    local session=$1
+    local startup="$repo/tmux-sessions/$session"
+    local placeholder
+
+    # The window the session was created with. It only keeps the session alive
+    # while the startup script builds the real windows.
+    placeholder=$(tmux display-message -p -t "$session:" '#{window_id}')
+
+    export TMUX_SESSION="$session"
+    if [[ -f $startup ]]; then
+        bash "$startup"
+    else
+        tmux-tab -n nvim nvim .
+        tmux-tab -n cmd
+    fi
+
+    # Never kill the placeholder if the startup script created nothing, that
+    # would take the whole session with it.
+    if [[ $(tmux list-windows -t "$session:" | wc -l) -gt 1 ]]; then
+        tmux kill-window -t "$placeholder"
+    fi
+
+    tmux select-window -t "$session:^"
+}
+
 if [[ $# -eq 1 ]] || [[ $# -eq 2 ]] ; then
     selected=$1
 else
@@ -39,12 +69,15 @@ selected_name=$(basename "$selected" | tr . _)
 tmux_running=$(pgrep tmux)
 
 if [[ -z $TMUX ]] && [[ -z $tmux_running ]]; then
-    tmux new-session -s "$selected_name" -c "$selected" $2
+    tmux new-session -ds "$selected_name" -c "$selected"
+    session_startup "$selected_name"
+    tmux attach-session -t "$selected_name"
     exit 0
 fi
 
 if ! tmux has-session -t="$selected_name" 2> /dev/null; then
-    tmux new-session -ds "$selected_name" -c "$selected" $2
+    tmux new-session -ds "$selected_name" -c "$selected"
+    session_startup "$selected_name"
 fi
 
 tmux switch-client -t "$selected_name"
