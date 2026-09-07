@@ -1,5 +1,5 @@
 require("lint").linters_by_ft = {
-    python = { "mypy" },
+    python = { "ruff" },
 }
 
 vim.api.nvim_create_autocmd({"BufWritePost", "BufEnter"}, {
