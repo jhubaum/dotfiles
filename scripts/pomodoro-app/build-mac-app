@@ -1,0 +1,63 @@
+#!/bin/bash
+# Build the Pomodoro.app bundle so the timer can be launched from Spotlight.
+#
+# The bundle is a stub: it only execs the source tree in scripts/pomodoro-app,
+# so editing the python needs no rebuild. Rerun this after moving the repo or
+# changing the plist.
+set -euo pipefail
+
+repo=$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")
+project="$repo/scripts/pomodoro-app"
+app="$HOME/Applications/Pomodoro.app"
+
+uv=$(command -v uv || true)
+if [ -z "$uv" ]; then
+    echo "uv is not on PATH, install it first: brew install uv" >&2
+    exit 1
+fi
+
+echo "Installing dependencies into $project/.venv"
+"$uv" sync --directory "$project"
+
+echo "Writing $app"
+rm -rf "$app"
+mkdir -p "$app/Contents/MacOS"
+
+cat > "$app/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key>
+    <string>Pomodoro</string>
+    <key>CFBundleDisplayName</key>
+    <string>Pomodoro</string>
+    <key>CFBundleIdentifier</key>
+    <string>de.huwald.pomodoro</string>
+    <key>CFBundleExecutable</key>
+    <string>Pomodoro</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <!-- Menu bar only: no dock icon and no entry in the app switcher. -->
+    <key>LSUIElement</key>
+    <true/>
+</dict>
+</plist>
+PLIST
+
+# Spotlight starts apps with a bare PATH, so uv is referenced absolutely.
+cat > "$app/Contents/MacOS/Pomodoro" <<STUB
+#!/bin/bash
+exec >> "\$HOME/Library/Logs/pomodoro.log" 2>&1
+exec "$uv" run --directory "$project" python -m pomodoro
+STUB
+chmod +x "$app/Contents/MacOS/Pomodoro"
+
+# Nudge LaunchServices so Spotlight picks the bundle up straight away.
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister \
+    -f "$app" 2>/dev/null || true
+
+echo "Done. Launch it from Spotlight as 'Pomodoro'."
+echo "Logs: $HOME/Library/Logs/pomodoro.log"

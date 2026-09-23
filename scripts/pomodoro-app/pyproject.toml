@@ -1,0 +1,14 @@
+[project]
+name = "pomodoro"
+version = "0.1.0"
+description = "A menu bar pomodoro timer"
+requires-python = "~=3.13.0"
+dependencies = [
+    "rumps",
+    "pyobjc-framework-Cocoa ; sys_platform == 'darwin'",
+]
+
+[tool.uv]
+# Only install the dependencies -- `python -m pomodoro` runs straight from the
+# source tree, so there is nothing to build and no build backend to configure.
+package = false
