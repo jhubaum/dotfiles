@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+# Clone a git repository into ~/projects (or ~/projects/personal with
+# --personal) and switch to a tmux session for it.
+#
+#   git-clone [--personal] GIT_URL
+
+usage() {
+    echo "usage: git-clone [--personal] GIT_URL" >&2
+    exit 1
+}
+
+base="$HOME/projects"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --personal) base="$HOME/projects/personal"; shift ;;
+        --)         shift; break ;;
+        -?*)        usage ;;
+        *)          break ;;
+    esac
+done
+
+[[ $# -eq 1 ]] || usage
+url=$1
+
+name=$(basename "${url%/}")
+name=${name%.git}
+[[ -n $name ]] || usage
+target="$base/$name"
+
+if [[ -e $target ]]; then
+    echo "git-clone: $target already exists" >&2
+    exit 1
+fi
+
+git clone "$url" "$target" || exit 1
+
+exec tmux-sessioniser "$target"
